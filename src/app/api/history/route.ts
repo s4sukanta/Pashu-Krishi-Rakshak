@@ -54,10 +54,10 @@ export async function GET(req: NextRequest) {
             usageLogs
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("DynamoDB GET Error:", error);
         return NextResponse.json(
-            { error: "Failed to fetch remote data", details: error.message },
+            { error: "Failed to fetch remote data", details: error instanceof Error ? error.message : "Unknown error" },
             { status: 500 }
         );
     }

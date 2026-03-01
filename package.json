@@ -12,6 +12,7 @@
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1000.0",
     "@aws-sdk/client-dynamodb": "^3.1000.0",
+    "@aws-sdk/client-geo-places": "^3.1000.0",
     "@aws-sdk/lib-dynamodb": "^3.1000.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

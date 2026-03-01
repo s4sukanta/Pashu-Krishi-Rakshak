@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { UploadCloud, Loader2, Sparkles, Image as ImageIcon, Camera, Trash2, Video, RefreshCw, Clock, History, Calendar, ChevronRight, Activity, HardDrive, Database, Copy, Save, CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react";
+import { UploadCloud, Loader2, Sparkles, Image as ImageIcon, Camera, Trash2, Video, RefreshCw, Clock, History, Calendar, ChevronRight, Activity, HardDrive, Database, Copy, Save, CheckCircle2, AlertTriangle, AlertCircle, ChevronDown, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,17 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+
+function generateUUID() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0,
+      v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 export interface DiagnosisRecord {
   id: string;
@@ -34,6 +45,7 @@ export default function Home() {
   const [language, setLanguage] = useState<string>("english");
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [parsedResult, setParsedResult] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [symptoms, setSymptoms] = useState<string>("");
@@ -48,6 +60,93 @@ export default function Home() {
   // NEW History UI States
   const [animalName, setAnimalName] = useState<string>("");
   const [historyFilter, setHistoryFilter] = useState<string>("all");
+
+  // NEW Expandable Details UI States
+  const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(false);
+  const [wikiImageUrl, setWikiImageUrl] = useState<string | null>(null);
+  const [isFetchingWiki, setIsFetchingWiki] = useState<boolean>(false);
+
+  // NEW Location States
+  const [nearestPharmacy, setNearestPharmacy] = useState<{ name: string; distanceKm: string } | null>(null);
+  const [isFetchingPharmacy, setIsFetchingPharmacy] = useState<boolean>(false);
+
+  useEffect(() => {
+    const fetchWikiImage = async (diseaseName: string) => {
+      // Avoid fetching for unclear media or explicit unknowns
+      if (!diseaseName || diseaseName.includes("Media Unclear") || diseaseName.toLowerCase() === "unknown") {
+        setWikiImageUrl(null);
+        return;
+      }
+      setIsFetchingWiki(true);
+      setWikiImageUrl(null);
+      try {
+        const queryTerm = encodeURIComponent(diseaseName);
+        const url = `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&format=json&piprop=original&titles=${queryTerm}&origin=*`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const pages = data.query?.pages;
+        if (pages) {
+          const pageId = Object.keys(pages)[0];
+          if (pageId && pageId !== "-1" && pages[pageId].original?.source) {
+            setWikiImageUrl(pages[pageId].original.source);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch Wikipedia image", err);
+      } finally {
+        setIsFetchingWiki(false);
+      }
+    };
+
+    if (parsedResult?.diseaseIdentification) {
+      fetchWikiImage(parsedResult.diseaseIdentification);
+      setIsDetailsOpen(false); // Reset toggle state on new diagnosis
+    }
+  }, [parsedResult?.diseaseIdentification]);
+
+  useEffect(() => {
+    if (parsedResult?.prescription?.medicines?.length > 0) {
+      if ("geolocation" in navigator) {
+        setIsFetchingPharmacy(true);
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            try {
+              const res = await fetch('/api/location', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  latitude: position.coords.latitude,
+                  longitude: position.coords.longitude,
+                }),
+              });
+              const data = await res.json();
+              if (res.ok && data.name) {
+                setNearestPharmacy({ name: data.name, distanceKm: data.distanceKm });
+              } else {
+                setNearestPharmacy(null);
+              }
+            } catch (err) {
+              console.error("Failed to fetch nearest pharmacy location", err);
+              setNearestPharmacy(null);
+            } finally {
+              setIsFetchingPharmacy(false);
+            }
+          },
+          (error) => {
+            // Mobile browsers over local IP (HTTP instead of HTTPS) will block Geolocation
+            // We just catch it silently and remove the loading spinner
+            console.warn("Geolocation blocked or unavailable in this context (likely missing HTTPS).", error?.message || "");
+            setIsFetchingPharmacy(false);
+          },
+          { timeout: 10000, maximumAge: 60000, enableHighAccuracy: false }
+        );
+      } else {
+        setIsFetchingPharmacy(false);
+      }
+    } else {
+      setNearestPharmacy(null);
+    }
+  }, [parsedResult]);
 
   const fetchRemoteData = async (uid: string) => {
     try {
@@ -66,7 +165,7 @@ export default function Home() {
   useEffect(() => {
     let currentUserId = localStorage.getItem("pashu_krishi_user_id");
     if (!currentUserId) {
-      currentUserId = crypto.randomUUID();
+      currentUserId = generateUUID();
       localStorage.setItem("pashu_krishi_user_id", currentUserId);
     }
     setUserId(currentUserId);
@@ -99,7 +198,7 @@ export default function Home() {
       });
     } else {
       const newRecord: DiagnosisRecord = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         timestamp: new Date().toISOString(),
         diagnosis: newResult,
         language: lang,
@@ -298,7 +397,7 @@ export default function Home() {
       saveToHistory(data.result, language, previousDiagnosis?.id, animalName.trim(), tempThumb);
 
       const newLog: UsageLog = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         timestamp: new Date().toISOString(),
         modelUsed: data.modelUsed || "amazon.nova-pro-v1:0",
         inputMediaSizeBytes: file.size,
@@ -839,7 +938,7 @@ export default function Home() {
               )}
 
               {parsedResult && !loading && (
-                <div className="flex flex-col h-full space-y-4 overflow-y-auto max-h-[600px] pr-2 scrollbar-none">
+                <div className="space-y-4 overflow-y-auto max-h-[600px] pb-6 pr-2 scrollbar-none">
 
                   {/* Confidence Banner */}
                   {parsedResult.confidenceScore >= 60 && !parsedResult.recommendHumanVet ? (
@@ -868,6 +967,36 @@ export default function Home() {
                     </div>
                   )}
 
+                  {/* Follow-Up Assessment Banner */}
+                  {parsedResult.followUpAssessment && parsedResult.followUpAssessment.status !== "not_applicable" && (
+                    <div className={`p-4 rounded-lg flex items-start gap-3 border ${parsedResult.followUpAssessment.status === "improving" ? "bg-emerald-50 border-emerald-200" :
+                      parsedResult.followUpAssessment.status === "worsening" ? "bg-rose-50 border-rose-200" :
+                        "bg-blue-50 border-blue-200" // unchanged or stable
+                      }`}>
+                      {parsedResult.followUpAssessment.status === "improving" ? (
+                        <Activity className="w-6 h-6 text-emerald-600 shrink-0" />
+                      ) : parsedResult.followUpAssessment.status === "worsening" ? (
+                        <AlertTriangle className="w-6 h-6 text-rose-600 shrink-0" />
+                      ) : (
+                        <Sparkles className="w-6 h-6 text-blue-600 shrink-0" />
+                      )}
+                      <div>
+                        <p className={`font-bold capitalize ${parsedResult.followUpAssessment.status === "improving" ? "text-emerald-900" :
+                          parsedResult.followUpAssessment.status === "worsening" ? "text-rose-900" :
+                            "text-blue-900"
+                          }`}>
+                          Condition is {parsedResult.followUpAssessment.status}
+                        </p>
+                        <p className={`text-sm mt-1 leading-snug ${parsedResult.followUpAssessment.status === "improving" ? "text-emerald-800" :
+                          parsedResult.followUpAssessment.status === "worsening" ? "text-rose-800" :
+                            "text-blue-800"
+                          }`}>
+                          {parsedResult.followUpAssessment.notes}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-3 border border-gray-100 rounded-lg bg-gray-50/50">
                       <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Identified Subject</p>
@@ -879,21 +1008,133 @@ export default function Home() {
                     </div>
                   </div>
 
+                  {/* Expandable Disease Details */}
+                  {parsedResult.diseaseDetails && parsedResult.diseaseDetails.description && (
+                    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+                        className="w-full p-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors focus:outline-none"
+                      >
+                        <span className="font-semibold text-gray-800 text-sm">Know More about {parsedResult.diseaseIdentification}</span>
+                        <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform duration-300 ${isDetailsOpen ? "rotate-180" : ""}`} />
+                      </button>
+
+                      <div className={`grid transition-all duration-300 ease-in-out ${isDetailsOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                        <div className="overflow-hidden">
+                          <div className="p-4 space-y-4 border-t border-gray-100 bg-white">
+
+                            {isFetchingWiki ? (
+                              <div className="flex animate-pulse space-x-3 items-center justify-center p-6 bg-gray-50 rounded-lg border border-gray-100">
+                                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                                <span className="text-sm font-medium text-gray-500">Searching Wikipedia for images...</span>
+                              </div>
+                            ) : wikiImageUrl ? (
+                              <div className="w-full flex justify-center mb-2 px-4 py-2 bg-gray-50 rounded-lg border border-gray-100">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={wikiImageUrl} alt={parsedResult.diseaseIdentification} className="max-h-56 w-auto rounded-md shadow-sm border border-gray-200 object-contain" />
+                              </div>
+                            ) : (
+                              <div className="w-full flex flex-col items-center justify-center p-6 bg-gray-50 rounded-lg border border-gray-100 mb-2">
+                                <ImageIcon className="w-8 h-8 text-gray-300 mb-2 opacity-50" />
+                                <p className="text-xs text-center text-gray-500 mb-3">No verified public image found on Wikipedia.</p>
+                                <a
+                                  href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(parsedResult.diseaseIdentification)}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-xs text-blue-600 hover:underline font-semibold bg-blue-50 px-3 py-1.5 rounded-full"
+                                >
+                                  View Images on Google
+                                </a>
+                              </div>
+                            )}
+
+                            <div>
+                              <h4 className="font-bold text-gray-800 text-sm mb-1.5 flex items-center gap-2">
+                                Description
+                              </h4>
+                              <p className="text-sm text-gray-600 leading-relaxed bg-gray-50 p-3 rounded-lg border border-gray-100">{parsedResult.diseaseDetails.description}</p>
+                            </div>
+
+                            {parsedResult.diseaseDetails.typicalSymptoms && parsedResult.diseaseDetails.typicalSymptoms.length > 0 && (
+                              <div>
+                                <h4 className="font-bold text-gray-800 text-sm mb-1.5">Typical Symptoms</h4>
+                                <ul className="list-disc pl-5 space-y-1 bg-yellow-50/50 p-3 rounded-lg border border-yellow-100/50">
+                                  {parsedResult.diseaseDetails.typicalSymptoms.map((sym: string, idx: number) => (
+                                    <li key={idx} className="text-sm text-gray-600">{sym}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Medicines */}
                   {parsedResult.prescription?.medicines?.length > 0 && (
                     <div className="mt-2 text-sm">
                       <h4 className="font-bold text-gray-800 mb-2 border-b border-gray-100 pb-2">Prescribed Medicines</h4>
-                      <div className="space-y-2">
-                        {parsedResult.prescription.medicines.map((med: { name: string; dosage: string; frequency: string; duration: string }, idx: number) => (
-                          <div key={idx} className="p-3 border border-blue-100 bg-blue-50/30 rounded-lg flex flex-col gap-1">
-                            <p className="font-semibold text-blue-900">{med.name}</p>
+                      <div className="space-y-3">
+                        {parsedResult.prescription.medicines.map((med: { name: string; dosage: string; frequency: string; duration: string; unitPriceEstimate?: string; totalCostEstimate?: string; purchaseQuery?: string }, idx: number) => (
+                          <div key={idx} className="p-4 border border-blue-100 bg-blue-50/30 rounded-lg flex flex-col gap-2 relative">
+                            <div className="flex justify-between items-start">
+                              <p className="font-semibold text-blue-900 text-base">{med.name}</p>
+                              {med.totalCostEstimate && (
+                                <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded shadow-sm">
+                                  {med.totalCostEstimate}
+                                </span>
+                              )}
+                            </div>
+
                             <p className="text-xs text-gray-600">
                               <span className="font-medium text-gray-700">Dosage:</span> {med.dosage} &nbsp;|&nbsp;
                               <span className="font-medium text-gray-700"> Freq:</span> {med.frequency} &nbsp;|&nbsp;
                               <span className="font-medium text-gray-700"> Duration:</span> {med.duration}
                             </p>
+
+                            {med.unitPriceEstimate && (
+                              <p className="text-xs text-green-700 font-medium bg-green-50 w-fit px-2 py-1 rounded inline-block mt-0.5">
+                                Unit Price: {med.unitPriceEstimate}
+                              </p>
+                            )}
+
+                            {med.purchaseQuery && (
+                              <div className="mt-1">
+                                <a
+                                  href={`https://www.google.com/search?tbm=shop&q=${encodeURIComponent(med.purchaseQuery)}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors px-3 py-1.5 rounded-full shadow-sm"
+                                >
+                                  Buy Online
+                                </a>
+                              </div>
+                            )}
                           </div>
                         ))}
+                      </div>
+
+                      {/* Local Pharmacy and Online Buying */}
+                      <div className="mt-4 flex flex-col sm:flex-row gap-2">
+                        {isFetchingPharmacy ? (
+                          <div className="flex-1 flex items-center justify-center p-3 text-xs bg-gray-50 border border-gray-100 rounded-lg text-gray-500 animate-pulse">
+                            <MapPin className="w-4 h-4 mr-2 text-gray-400" />
+                            Looking for nearest veterinary pharmacy...
+                          </div>
+                        ) : nearestPharmacy ? (
+                          <div className="flex-1 flex flex-col justify-center p-3 text-xs bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-900 shadow-sm">
+                            <div className="flex items-center gap-1 font-bold mb-1">
+                              <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
+                              Nearest Pharmacy Found
+                            </div>
+                            <span className="font-semibold text-emerald-800 leading-tight block">{nearestPharmacy.name}</span>
+                            {nearestPharmacy.distanceKm && (
+                              <span className="text-emerald-700 mt-1 block font-medium">{nearestPharmacy.distanceKm} km away</span>
+                            )}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   )}

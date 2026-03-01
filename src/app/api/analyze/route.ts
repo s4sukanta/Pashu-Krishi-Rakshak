@@ -3,6 +3,17 @@ import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedroc
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
 
+function generateUUID() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0,
+      v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export async function POST(req: NextRequest) {
   // Initialize the Bedrock client inside the request handler
   // to ensure it picks up the latest environment variables loaded by Next.js
@@ -81,13 +92,27 @@ Do NOT wrap the JSON in Markdown ticks (like \`\`\`json). Do NOT include any con
   "diseaseIdentification": "string (name of the disease, pest, or diagnosis)",
   "confidenceScore": number (0 to 100 representing your visual certainty),
   "subjectType": "cow|lamb|sheep|dog|crop|unknown",
+  "diseaseDetails": {
+    "description": "string (Detailed explanation of what the disease is, how it looks, and its causes)",
+    "typicalSymptoms": [
+      "string (Symptom 1)",
+      "string (Symptom 2)"
+    ]
+  },
+  "followUpAssessment": {
+    "status": "improving|worsening|unchanged|not_applicable",
+    "notes": "string (brief assessment comparing current media to previous diagnosis context, or 'not applicable' if this is a first diagnosis)"
+  },
   "prescription": {
     "medicines": [
       {
         "name": "string (name of the commonly available drug or natural remedy)",
         "dosage": "string (how much to apply/feed)",
         "frequency": "string (how often)",
-        "duration": "string (for how many days)"
+        "duration": "string (for how many days)",
+        "unitPriceEstimate": "string (e.g., '₹50 / 10ml', provide an educated estimate STRICTLY in INR)",
+        "totalCostEstimate": "string (e.g., '₹150 for full course', provide an educated estimate STRICTLY in INR)",
+        "purchaseQuery": "string (Specific search query for buying this online, e.g., 'Ivermectin 1% veterinary buy online')"
       }
     ],
     "careSteps": [
@@ -117,6 +142,14 @@ Instead, you must instantly output the following JSON format to tell the user ex
   "diseaseIdentification": "Media Unclear: [Explain exactly which rule was violated, e.g., 'The animals are too far away to see fine details like skin lesions', or 'There are multiple animals and it is unclear who the patient is']. Please recapture the video or image from a closer look, focusing directly on the infected or diseased area.",
   "confidenceScore": 0,
   "subjectType": "unknown",
+  "diseaseDetails": {
+    "description": "",
+    "typicalSymptoms": []
+  },
+  "followUpAssessment": {
+    "status": "not_applicable",
+    "notes": ""
+  },
   "prescription": {
     "medicines": [],
     "careSteps": []
@@ -240,7 +273,7 @@ If all rules are followed and the media is clear enough for a highly confident v
       const historyItem = {
         userId,
         timestamp,
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         diagnosis: finalDiagnosisText,
         language,
         animalName: animalName || undefined,
@@ -250,7 +283,7 @@ If all rules are followed and the media is clear enough for a highly confident v
       const usageItem = {
         userId,
         timestamp,
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         modelUsed,
         inputMediaSizeBytes
       };
