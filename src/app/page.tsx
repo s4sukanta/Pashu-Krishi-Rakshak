@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { UploadCloud, Loader2, Sparkles, Image as ImageIcon, Camera, Trash2, Video, RefreshCw, Clock, History, Calendar, ChevronRight, Activity, HardDrive, Database, Copy, Save } from "lucide-react";
+import { UploadCloud, Loader2, Sparkles, Image as ImageIcon, Camera, Trash2, Video, RefreshCw, Clock, History, Calendar, ChevronRight, Activity, HardDrive, Database, Copy, Save, CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,8 @@ export interface DiagnosisRecord {
   timestamp: string;
   diagnosis: string;
   language: string;
+  animalName?: string;
+  thumbnailBase64?: string;
 }
 
 export interface UsageLog {
@@ -32,6 +34,7 @@ export default function Home() {
   const [language, setLanguage] = useState<string>("english");
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<string | null>(null);
+  const [parsedResult, setParsedResult] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [symptoms, setSymptoms] = useState<string>("");
   const [previousDiagnosis, setPreviousDiagnosis] = useState<DiagnosisRecord | null>(null);
@@ -41,6 +44,10 @@ export default function Home() {
 
   const [userId, setUserId] = useState<string>("");
   const [inputUserId, setInputUserId] = useState<string>("");
+
+  // NEW History UI States
+  const [animalName, setAnimalName] = useState<string>("");
+  const [historyFilter, setHistoryFilter] = useState<string>("all");
 
   const fetchRemoteData = async (uid: string) => {
     try {
@@ -76,7 +83,7 @@ export default function Home() {
     }
   };
 
-  const saveToHistory = async (newResult: string, lang: string, existingRecordId?: string) => {
+  const saveToHistory = async (newResult: string, lang: string, existingRecordId?: string, animalNameStr?: string, thumbnailBase64Str?: string) => {
     let updatedHistory = [...history];
 
     if (existingRecordId) {
@@ -95,7 +102,9 @@ export default function Home() {
         id: crypto.randomUUID(),
         timestamp: new Date().toISOString(),
         diagnosis: newResult,
-        language: lang
+        language: lang,
+        animalName: animalNameStr || undefined,
+        thumbnailBase64: thumbnailBase64Str || undefined
       };
       updatedHistory = [newRecord, ...updatedHistory];
     }
@@ -104,14 +113,72 @@ export default function Home() {
     // Note: The actual DDB saving happens server-side in /api/analyze now
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Utility for generating a small inline thumbnail
+  const generateThumbnail = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const isVideo = file.type.startsWith('video/');
+      const mediaElement = isVideo ? document.createElement('video') : document.createElement('img');
+      const url = URL.createObjectURL(file);
+
+      const onLoaded = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve("");
+
+        // Calculate aspect ratio for 64x64 max bounding box
+        const size = 64;
+        const width = isVideo ? (mediaElement as HTMLVideoElement).videoWidth : (mediaElement as HTMLImageElement).width;
+        const height = isVideo ? (mediaElement as HTMLVideoElement).videoHeight : (mediaElement as HTMLImageElement).height;
+
+        const scale = Math.min(size / width, size / height);
+        canvas.width = size;
+        canvas.height = size;
+
+        // Fill white background just in case
+        ctx.fillStyle = '#f3f4f6';
+        ctx.fillRect(0, 0, size, size);
+
+        const drawW = width * scale;
+        const drawH = height * scale;
+        const drawX = (size - drawW) / 2;
+        const drawY = (size - drawH) / 2;
+
+        ctx.drawImage(mediaElement, drawX, drawY, drawW, drawH);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+        URL.revokeObjectURL(url);
+      };
+
+      if (isVideo) {
+        const video = mediaElement as HTMLVideoElement;
+        video.src = url;
+        video.muted = true;
+        video.playsInline = true;
+        video.currentTime = 1.0; // grab 1 second in
+        video.addEventListener('seeked', onLoaded, { once: true });
+        video.addEventListener('error', () => resolve(""), { once: true });
+      } else {
+        const img = mediaElement as HTMLImageElement;
+        img.src = url;
+        img.onload = onLoaded;
+        img.onerror = () => resolve("");
+      }
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
       setPreviewUrl(URL.createObjectURL(selectedFile));
       setResult(null); // Clear previous result
+      setParsedResult(null);
       setError(null);
-      setError(null);
+
+      // Async generate thumbnail
+      const thumb = await generateThumbnail(selectedFile);
+      // We will store this locally on the window or component state briefly to append it later
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any)._tempThumbnailBase64 = thumb;
     }
   };
 
@@ -171,6 +238,7 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setParsedResult(null);
 
     const formData = new FormData();
     formData.append("language", language);
@@ -181,6 +249,15 @@ export default function Home() {
     }
     if (previousDiagnosis) {
       formData.append("previousDiagnosis", previousDiagnosis.diagnosis);
+    }
+
+    if (animalName.trim()) {
+      formData.append("animalName", animalName.trim());
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tempThumb = (window as any)._tempThumbnailBase64;
+    if (tempThumb) {
+      formData.append("thumbnailBase64", tempThumb);
     }
 
     if (file.type.startsWith('video/')) {
@@ -211,8 +288,14 @@ export default function Home() {
       }
 
       setResult(data.result);
+      try {
+        setParsedResult(JSON.parse(data.result));
+      } catch {
+        setParsedResult(null);
+      }
+
       // Update local state optimistic UI
-      saveToHistory(data.result, language, previousDiagnosis?.id);
+      saveToHistory(data.result, language, previousDiagnosis?.id, animalName.trim(), tempThumb);
 
       const newLog: UsageLog = {
         id: crypto.randomUUID(),
@@ -227,8 +310,8 @@ export default function Home() {
         setPreviousDiagnosis(null);
       }
 
-    } catch (err: any) {
-      setError(err.message || "Failed to analyze the image.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to analyze the image.");
     } finally {
       setLoading(false);
     }
@@ -376,12 +459,45 @@ export default function Home() {
                 </Button>
               </SheetTrigger>
               <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-                <SheetHeader className="mb-6">
+                <SheetHeader className="mb-4">
                   <SheetTitle>Diagnosis History</SheetTitle>
                   <SheetDescription>
                     Your past inquiries are saved locally on this device.
                   </SheetDescription>
                 </SheetHeader>
+
+                {/* Filter Tabs */}
+                {history.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto pb-4 mb-4 border-b border-gray-100 scrollbar-hide">
+                    {['all', 'cow', 'dog', 'crop', 'other'].map(filter => (
+                      <button
+                        key={filter}
+                        onClick={() => setHistoryFilter(filter)}
+                        className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap transition-colors ${historyFilter === filter
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                      >
+                        {filter.charAt(0).toUpperCase() + filter.slice(1)} ({
+                          filter === 'all'
+                            ? history.length
+                            : history.filter(r => {
+                              try {
+                                const p = JSON.parse(r.diagnosis);
+                                const t = (p.subjectType || "other").toLowerCase();
+                                if (filter === 'other') return !['cow', 'cattle', 'dog', 'crop', 'plant'].some(k => t.includes(k));
+                                if (filter === 'cow') return t.includes('cow') || t.includes('cattle');
+                                if (filter === 'crop') return t.includes('crop') || t.includes('plant');
+                                return t.includes(filter);
+                              } catch {
+                                return filter === 'other'; // legacy goes to other
+                              }
+                            }).length
+                        })
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {history.length === 0 ? (
                   <div className="text-center text-gray-400 py-10">
@@ -390,39 +506,113 @@ export default function Home() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {history.map((record) => (
-                      <div key={record.id} className="p-4 border border-gray-100 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md transition-all group">
-                        <div className="flex items-center text-xs text-gray-500 mb-2">
-                          <Calendar className="w-3 h-3 mr-1" />
-                          {new Date(record.timestamp).toLocaleDateString()} at {new Date(record.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          <span className="ml-auto uppercase text-[10px] font-bold tracking-wider text-gray-400 bg-gray-200 px-2 py-0.5 rounded-md">
-                            {record.language}
-                          </span>
+                    {history.filter((record) => {
+                      if (historyFilter === 'all') return true;
+                      try {
+                        const parsed = JSON.parse(record.diagnosis);
+                        const t = (parsed.subjectType || "other").toLowerCase();
+                        if (historyFilter === 'other') return !['cow', 'cattle', 'dog', 'crop', 'plant'].some(k => t.includes(k));
+                        if (historyFilter === 'cow') return t.includes('cow') || t.includes('cattle');
+                        if (historyFilter === 'crop') return t.includes('crop') || t.includes('plant');
+                        return t.includes(historyFilter);
+                      } catch {
+                        return historyFilter === 'other';
+                      }
+                    }).map((record) => {
+                      let isJson = false;
+                      let subjectType = "other";
+                      let displayTitle = record.diagnosis.split('\n').find(line => line.length > 20) || "Diagnosis record";
+                      let confidenceColor = "bg-gray-400"; // fallback
+
+                      try {
+                        const parsed = JSON.parse(record.diagnosis);
+                        isJson = true;
+                        subjectType = parsed.subjectType || "Unknown";
+                        displayTitle = parsed.diseaseIdentification || displayTitle;
+
+                        if (parsed.confidenceScore >= 60 && !parsed.recommendHumanVet) {
+                          confidenceColor = "bg-green-500";
+                        } else if (parsed.confidenceScore >= 30) {
+                          confidenceColor = "bg-yellow-500";
+                        } else {
+                          confidenceColor = "bg-red-500";
+                        }
+                      } catch {
+                        // Keep markdown parsing safe string
+                      }
+
+                      return (
+                        <div key={record.id} className="p-4 border border-gray-100 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md transition-all group relative">
+
+                          {/* Header & Thumbnail */}
+                          <div className="flex items-center justify-between mb-3 border-b border-gray-100 pb-2">
+                            <div className="flex items-center gap-2">
+                              {record.thumbnailBase64 ? (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img src={record.thumbnailBase64} alt="Thumb" className="w-8 h-8 rounded-md object-cover border border-gray-200 shadow-sm" />
+                              ) : (
+                                <div className="w-8 h-8 rounded-md bg-gray-100 border border-gray-200 flex items-center justify-center">
+                                  <ImageIcon className="w-4 h-4 text-gray-400" />
+                                </div>
+                              )}
+
+                              {isJson ? (
+                                <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-200 bg-white text-gray-700 uppercase tracking-widest`}>
+                                  {subjectType}
+                                </div>
+                              ) : (
+                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 px-2 py-0.5 rounded-full">
+                                  Legacy
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex flex-col items-end gap-1">
+                              <span className="uppercase text-[9px] font-bold tracking-wider text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded-sm">
+                                {record.language}
+                              </span>
+                              <div className="flex items-center text-[10px] text-gray-400 font-medium">
+                                {new Date(record.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Title & Nickname */}
+                          <div className="mb-3">
+                            <div className="flex items-start gap-2 mb-1">
+                              {isJson && (
+                                <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${confidenceColor}`} title="Confidence Severity" />
+                              )}
+                              <p className="text-sm font-semibold text-gray-800 line-clamp-2 leading-tight">
+                                {record.animalName ? <span className="text-blue-600">&quot;{record.animalName}&quot;</span> : null}
+                                {record.animalName ? " - " : ""}{displayTitle}
+                              </p>
+                            </div>
+                          </div>
+
+                          <SheetTrigger asChild>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="w-full group-hover:bg-blue-50 group-hover:text-blue-700"
+                              onClick={() => {
+                                setPreviousDiagnosis(record);
+                                setResult(null);
+                                setParsedResult(null);
+                                setFile(null);
+                                setPreviewUrl(null);
+                                setSymptoms("");
+                                setError(null);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
+                            >
+                              Follow Up on this Case
+                              <ChevronRight className="w-4 h-4 ml-1 opacity-50" />
+                            </Button>
+                          </SheetTrigger>
                         </div>
-                        <p className="text-sm font-medium text-gray-800 line-clamp-3 mb-3">
-                          {record.diagnosis.split('\n').find(line => line.length > 20) || "Diagnosis record"}
-                        </p>
-                        <SheetTrigger asChild>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="w-full group-hover:bg-blue-50 group-hover:text-blue-700"
-                            onClick={() => {
-                              setPreviousDiagnosis(record);
-                              setResult(null);
-                              setFile(null);
-                              setPreviewUrl(null);
-                              setSymptoms("");
-                              setError(null);
-                              window.scrollTo({ top: 0, behavior: 'smooth' });
-                            }}
-                          >
-                            Follow Up on this Case
-                            <ChevronRight className="w-4 h-4 ml-1 opacity-50" />
-                          </Button>
-                        </SheetTrigger>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </SheetContent>
@@ -548,6 +738,7 @@ export default function Home() {
                             setFile(null);
                             setPreviewUrl(null);
                             setResult(null);
+                            setParsedResult(null);
                           }}
                           className="absolute top-3 right-3 shadow-md z-20 opacity-90 hover:opacity-100 transition-opacity"
                         >
@@ -567,6 +758,17 @@ export default function Home() {
                       className="resize-none h-24"
                       value={symptoms}
                       onChange={(e) => setSymptoms(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Animal Nickname Input */}
+                  <div className="space-y-3">
+                    <Label htmlFor="animalName">Animal ID / Nickname (Optional)</Label>
+                    <Input
+                      id="animalName"
+                      placeholder="e.g., Buddy, Tag #432, Fido"
+                      value={animalName}
+                      onChange={(e) => setAnimalName(e.target.value)}
                     />
                   </div>
 
@@ -611,7 +813,7 @@ export default function Home() {
           <Card className="shadow-lg border-0 ring-1 ring-gray-200 bg-white flex flex-col h-full">
             <CardHeader>
               <CardTitle>Analysis Result</CardTitle>
-              <CardDescription>The AI's response will appear here.</CardDescription>
+              <CardDescription>The AI&apos;s response will appear here.</CardDescription>
             </CardHeader>
             <CardContent className="flex-grow flex flex-col">
 
@@ -636,7 +838,107 @@ export default function Home() {
                 </div>
               )}
 
-              {result && !loading && (
+              {parsedResult && !loading && (
+                <div className="flex flex-col h-full space-y-4 overflow-y-auto max-h-[600px] pr-2 scrollbar-none">
+
+                  {/* Confidence Banner */}
+                  {parsedResult.confidenceScore >= 60 && !parsedResult.recommendHumanVet ? (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
+                      <div>
+                        <p className="font-bold text-green-900">AI Assessment Confident ({parsedResult.confidenceScore}%)</p>
+                        <p className="text-sm text-green-700">See the recommended home treatment plan below.</p>
+                      </div>
+                    </div>
+                  ) : parsedResult.confidenceScore >= 30 ? (
+                    <div className="p-3 bg-yellow-50 border border-yellow-300 rounded-lg flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-bold text-yellow-900">AI Uncertainty Warning ({parsedResult.confidenceScore}%)</p>
+                        <p className="text-sm text-yellow-800">The AI is uncertain. We highly recommend consulting a human veterinarian before proceeding with treatment.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-red-50 border border-red-300 rounded-lg flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-bold text-red-900">CRITICAL: Severe Uncertainty ({parsedResult.confidenceScore}%)</p>
+                        <p className="text-sm text-red-800">Diagnosis is highly uncertain due to unclear media. Do not rely heavily on this prescription.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 border border-gray-100 rounded-lg bg-gray-50/50">
+                      <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Identified Subject</p>
+                      <p className="text-sm font-semibold text-gray-900 capitalize">{parsedResult.subjectType}</p>
+                    </div>
+                    <div className="p-3 border border-gray-100 rounded-lg bg-gray-50/50">
+                      <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Diagnosis</p>
+                      <p className="text-sm font-semibold text-gray-900">{parsedResult.diseaseIdentification}</p>
+                    </div>
+                  </div>
+
+                  {/* Medicines */}
+                  {parsedResult.prescription?.medicines?.length > 0 && (
+                    <div className="mt-2 text-sm">
+                      <h4 className="font-bold text-gray-800 mb-2 border-b border-gray-100 pb-2">Prescribed Medicines</h4>
+                      <div className="space-y-2">
+                        {parsedResult.prescription.medicines.map((med: { name: string; dosage: string; frequency: string; duration: string }, idx: number) => (
+                          <div key={idx} className="p-3 border border-blue-100 bg-blue-50/30 rounded-lg flex flex-col gap-1">
+                            <p className="font-semibold text-blue-900">{med.name}</p>
+                            <p className="text-xs text-gray-600">
+                              <span className="font-medium text-gray-700">Dosage:</span> {med.dosage} &nbsp;|&nbsp;
+                              <span className="font-medium text-gray-700"> Freq:</span> {med.frequency} &nbsp;|&nbsp;
+                              <span className="font-medium text-gray-700"> Duration:</span> {med.duration}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Care Steps */}
+                  {parsedResult.prescription?.careSteps?.length > 0 && (
+                    <div className="mt-4 text-sm pb-4">
+                      <h4 className="font-bold text-gray-800 mb-3 border-b border-gray-100 pb-2">Immediate Care Steps</h4>
+                      <ul className="pl-0 space-y-2">
+                        {parsedResult.prescription.careSteps.map((step: string, idx: number) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <span className="bg-gray-100 text-gray-500 text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5 shrink-0">{idx + 1}</span>
+                            <span className="text-gray-700">{step}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="mt-auto pt-4 border-t border-gray-100">
+                    <Button
+                      variant="outline"
+                      className="w-full border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+                      onClick={() => {
+                        const latestRecord = history[0];
+                        if (latestRecord) {
+                          setPreviousDiagnosis(latestRecord);
+                          setResult(null);
+                          setParsedResult(null);
+                          setFile(null);
+                          setPreviewUrl(null);
+                          setSymptoms("");
+                          setError(null);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Provide Follow-Up Media for this Diagnosis
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {result && !parsedResult && !loading && (
                 <div className="flex flex-col h-full">
                   <div className="p-5 bg-gray-50 rounded-lg border border-gray-100 flex-grow text-gray-800 text-sm leading-relaxed overflow-y-auto max-h-[400px] prose prose-sm max-w-none prose-blue mb-4">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -653,6 +955,7 @@ export default function Home() {
                       if (latestRecord) {
                         setPreviousDiagnosis(latestRecord);
                         setResult(null);
+                        setParsedResult(null);
                         setFile(null);
                         setPreviewUrl(null);
                         setSymptoms("");

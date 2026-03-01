@@ -32,6 +32,8 @@ export async function POST(req: NextRequest) {
     const previousDiagnosis = formData.get("previousDiagnosis") as string | null;
     const symptoms = formData.get("symptoms") as string | null;
     const userId = formData.get("userId") as string;
+    const animalName = formData.get("animalName") as string | null;
+    const thumbnailBase64 = formData.get("thumbnailBase64") as string | null;
 
     if (!userId) {
       return NextResponse.json({ error: "Missing userId" }, { status: 400 });
@@ -54,11 +56,7 @@ ${previousDiagnosis}
 Your task is to compare the new media against the context of the previous diagnosis.
 - Determine if the condition is IMPROVING, STABLE, or WORSENING.
 - If it is improving or stable, provide updated home-care steps to continue the healing process.
-- CRITICAL EXCEPTION: If the condition is clearly WORSENING (e.g., an infection is actively spreading, a wound is more severe, loss of condition), you MUST explicitly advise the farmer to seek out a physical veterinarian immediately, as home treatment is no longer sufficient. Do not hesitate to refer if it is worsening.
-
-Format your response with:
-1. Progress Assessment (Improving/Stable/Worsening)
-2. Updated Treatment Plan or Next Action Steps
+- CRITICAL EXCEPTION: If the condition is clearly WORSENING, you MUST explicitly advise the farmer to seek out a physical veterinarian immediately ("recommendHumanVet": true).
 </FOLLOW_UP_PROTOCOL>`
       : `
 <DIAGNOSIS_PROTOCOL>
@@ -68,47 +66,80 @@ IF the media is perfectly clear and the subject's issue is visible, you must scr
 - Hooves/Feet
 - Unusual movement or posture
 
-Format your response with:
-1. Diagnosis
-2. Recommended Treatment (focus heavily on home/farm remedies and available medicines)
-
 CRUCIAL: Our target audience is rural farmers who may not have easy access to a veterinarian. YOU MUST ACT AS THEIR PRIMARY VETERINARIAN.
-- Provide immediate, actionable, step-by-step home treatments and cures they can administer themselves. 
-- Suggest specific, commonly available veterinary medicines (e.g., specific ointments, antibiotics, or natural remedies) with dosages if applicable.
-- ABSOLUTELY DO NOT suggest "consult a veterinarian" or "seek professional help" for infections, diseases, or manageable injuries. YOU are the professional providing the help.
-- The ONLY EXCEPTION where you may advise referring to a physical veterinarian is for severe structural trauma that cannot be managed at home, such as broken bones, major fractures, or deep muscle ruptures requiring surgery. Otherwise, give them exactly what they need to cure it themselves.
+- Provide immediate, actionable home treatments and cures they can administer themselves. 
+- ABSOLUTELY DO NOT lightly suggest "consult a veterinarian" unless it is a severe structural trauma (broken bones, major fractures, deep muscle ruptures). 
+- Your goal is to give them exactly the medicines and care steps to cure manageable infections/diseases at home.
 </DIAGNOSIS_PROTOCOL>`;
 
-    const systemPrompt = `You are an expert, eagle-eyed field veterinary doctor and agricultural inspector.
-    
-<CRITICAL_INSTRUCTIONS>
-YOU MUST EVALUATE THE MEDIA BEFORE ATTEMPTING A DIAGNOSIS.
+    const jsonFormatPrompt = `
+<JSON_SCHEMA_REQUIREMENT>
+You MUST output your ENTIRE final diagnosis STRICTLY as a raw JSON object matching the exact structure below. 
+Do NOT wrap the JSON in Markdown ticks (like \`\`\`json). Do NOT include any conversational preamble or postscript. ONLY output the JSON.
 
-IF ANY of the following rules are violated:
-1. The subject is captured from too far a distance.
-2. The media is heavily blurred or shaky.
-3. The specific issue, anomaly, or infection is not clearly visible in high detail.
+{
+  "diseaseIdentification": "string (name of the disease, pest, or diagnosis)",
+  "confidenceScore": number (0 to 100 representing your visual certainty),
+  "subjectType": "cow|lamb|sheep|dog|crop|unknown",
+  "prescription": {
+    "medicines": [
+      {
+        "name": "string (name of the commonly available drug or natural remedy)",
+        "dosage": "string (how much to apply/feed)",
+        "frequency": "string (how often)",
+        "duration": "string (for how many days)"
+      }
+    ],
+    "careSteps": [
+      "string (actionable home-care step 1)",
+      "string (actionable home-care step 2)"
+    ]
+  },
+  "recommendHumanVet": boolean (true ONLY if confidence < 60% OR condition is critically worsening/needs surgery, otherwise false)
+}
+</JSON_SCHEMA_REQUIREMENT>`;
+
+    const systemPrompt = `You are a strict, expert veterinary doctor and agricultural inspector.
+    
+<ABSOLUTE_PRIORITY_INSTRUCTIONS>
+BEFORE attempting any diagnosis, you MUST evaluate the quality of the provided media. 
+
+If ANY of the following rules are violated, you MUST IMMEDIATELY STOP ANALYSIS AND REJECT THE MEDIA:
+1. The subject is captured from too far a distance to see medical details.
+2. The media is heavily blurred, shaky, or completely unreadable.
+3. The specific medical issue, anomaly, or infection is not clearly visible in high detail.
 4. There are multiple animals in the media and it is not blatantly obvious which one is the patient.
 
-THEN you MUST immediately STOP analysis and reply with the following template:
-**Media Unclear**
-[Explain exactly which rule was violated, e.g., "The animals are too far away to see fine details like skin lesions or eye infections."]
-Please recapture the video or image from a closer look, focusing directly on the infected or diseased area.
+If a rule is violated, DO NOT GUESS. DO NOT PROVIDE ANY PREVENTATIVE ADVICE OR HOME REMEDIES. 
+Instead, you must instantly output the following JSON format to tell the user exactly what is wrong and advise them to recapture the media:
 
-DO NOT GUESS. DO NOT ATTEMPT TO PROVIDE A DIAGNOSIS OR HOME REMEDIES IF THE RULES ARE VIOLATED.
-</CRITICAL_INSTRUCTIONS>
+{
+  "diseaseIdentification": "Media Unclear: [Explain exactly which rule was violated, e.g., 'The animals are too far away to see fine details like skin lesions', or 'There are multiple animals and it is unclear who the patient is']. Please recapture the video or image from a closer look, focusing directly on the infected or diseased area.",
+  "confidenceScore": 0,
+  "subjectType": "unknown",
+  "prescription": {
+    "medicines": [],
+    "careSteps": []
+  },
+  "recommendHumanVet": true
+}
+</ABSOLUTE_PRIORITY_INSTRUCTIONS>
 
-${symptomsPrompt}
+If all rules are followed and the media is clear enough for a highly confident visual diagnosis, proceed with the following context and protocols:
 
-${protocolPrompt}
+    ${symptomsPrompt}
+
+    ${protocolPrompt}
     
-CRITICAL INSTRUCTION: You MUST translate and write your ENTIRE response (whether a rejection or a diagnosis) in ${language.toUpperCase()}.`;
+    ${jsonFormatPrompt}
+        
+    CRITICAL INSTRUCTION: You MUST translate and write ALL string values inside the JSON object into ${language.toUpperCase()}. The JSON keys must remain exact English matches.`;
 
     if (!mediaFiles || mediaFiles.length === 0) {
       return NextResponse.json({ error: "No media file provided" }, { status: 400 });
     }
 
-    const contentBlocks: any[] = [];
+    const contentBlocks: Record<string, unknown>[] = [];
 
     for (const mediaFile of mediaFiles) {
       // Convert the uploaded file to a buffer, then to base64
@@ -192,10 +223,17 @@ CRITICAL INSTRUCTION: You MUST translate and write your ENTIRE response (whether
       inputMediaSizeBytes += mf.size;
     }
 
+    // Clean up potential markdown JSON wrapping from Bedrock output before saving
+    let cleanedOutput = completionAmount;
+    if (cleanedOutput.startsWith("\`\`\`json")) {
+      cleanedOutput = cleanedOutput.replace(/^\`\`\`json\s*/, "").replace(/\s*\`\`\`$/, "");
+    }
+
     // 2. Build the chained diagnosis record for history
-    const finalDiagnosisText = previousDiagnosis
-      ? previousDiagnosis + "\n\n*** FOLLOW UP RECORD: ***\n\n" + completionAmount
-      : completionAmount;
+    // Since we expect JSON now, if there is a previous diagnosis, we should inject a "PREVIOUS_HISTORY_NOTE" into the new JSON
+    // Or simpler: just let the LLM generate the new JSON. The previous context is just strings of previous JSON outputs.
+    // For local display purposes, we just return the latest JSON.
+    const finalDiagnosisText = cleanedOutput;
 
     // 3. Save to DynamoDB
     if (completionAmount !== "No response generated." && userId) {
@@ -204,7 +242,9 @@ CRITICAL INSTRUCTION: You MUST translate and write your ENTIRE response (whether
         timestamp,
         id: crypto.randomUUID(),
         diagnosis: finalDiagnosisText,
-        language
+        language,
+        animalName: animalName || undefined,
+        thumbnailBase64: thumbnailBase64 || undefined
       };
 
       const usageItem = {
@@ -232,10 +272,10 @@ CRITICAL INSTRUCTION: You MUST translate and write your ENTIRE response (whether
       modelUsed: modelUsed
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Bedrock API Error:", error);
     return NextResponse.json(
-      { error: "Error processing image", details: error.message },
+      { error: "Error processing image", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     );
   }
