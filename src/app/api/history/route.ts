@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, QueryCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({
     region: process.env.AWS_REGION || "us-east-1",
@@ -58,6 +58,75 @@ export async function GET(req: NextRequest) {
         console.error("DynamoDB GET Error:", error);
         return NextResponse.json(
             { error: "Failed to fetch remote data", details: error instanceof Error ? error.message : "Unknown error" },
+            { status: 500 }
+        );
+    }
+}
+
+// Delete a Case or a Specific Record
+export async function DELETE(req: NextRequest) {
+    try {
+        const body = await req.json();
+        const { userId, caseId, timestamp } = body;
+
+        if (!userId) {
+            return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+        }
+        if (!caseId && !timestamp) {
+            return NextResponse.json({ error: "Must provide either caseId (to delete full case) or timestamp (to delete specific visit)" }, { status: 400 });
+        }
+
+        let itemsToDelete: { userId: string, timestamp: string }[] = [];
+
+        // If they want to delete a single record, it's easy
+        if (timestamp && !caseId) {
+            itemsToDelete.push({ userId, timestamp });
+        }
+        // If they want to delete a full case, query all items first
+        else if (caseId) {
+            const queryCommand = new QueryCommand({
+                TableName: "PashuKrishi_History",
+                KeyConditionExpression: "userId = :userId",
+                ExpressionAttributeValues: {
+                    ":userId": userId
+                }
+            });
+            const response = await ddbDocClient.send(queryCommand);
+            const items = response.Items || [];
+
+            // Filter only items that match the caseId
+            itemsToDelete = items
+                .filter(item => item.caseId === caseId || item.id === caseId) // fallbacks for old records
+                .map(item => ({ userId: item.userId, timestamp: item.timestamp }));
+        }
+        else if (caseId && timestamp) {
+            // Safe fallback if they somehow provided both, but prioritize just one
+            itemsToDelete.push({ userId, timestamp });
+        }
+
+        if (itemsToDelete.length === 0) {
+            return NextResponse.json({ message: "No matching records found to delete." });
+        }
+
+        // Execute deletions
+        const deletePromises = itemsToDelete.map(key =>
+            ddbDocClient.send(new DeleteCommand({
+                TableName: "PashuKrishi_History",
+                Key: {
+                    userId: key.userId,
+                    timestamp: key.timestamp
+                }
+            }))
+        );
+
+        await Promise.all(deletePromises);
+
+        return NextResponse.json({ message: "Successfully deleted records", deletedCount: itemsToDelete.length });
+
+    } catch (error: unknown) {
+        console.error("DynamoDB DELETE Error:", error);
+        return NextResponse.json(
+            { error: "Failed to delete record(s)", details: error instanceof Error ? error.message : "Unknown error" },
             { status: 500 }
         );
     }

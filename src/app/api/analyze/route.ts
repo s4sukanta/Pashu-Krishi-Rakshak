@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
     const userId = formData.get("userId") as string;
     const animalName = formData.get("animalName") as string | null;
     const thumbnailBase64 = formData.get("thumbnailBase64") as string | null;
+    const caseId = formData.get("caseId") as string | null;
 
     if (!userId) {
       return NextResponse.json({ error: "Missing userId" }, { status: 400 });
@@ -58,11 +59,11 @@ export async function POST(req: NextRequest) {
       ? `
 <FOLLOW_UP_PROTOCOL>
 The farmer has provided FOLLOW-UP media for an animal with a previously diagnosed condition.
-Here is the previous diagnosis and treatment plan context:
+Here is the previous timeline history of this case:
 
-<PREVIOUS_DIAGNOSIS>
+<CASE_HISTORY>
 ${previousDiagnosis}
-</PREVIOUS_DIAGNOSIS>
+</CASE_HISTORY>
 
 Your task is to compare the new media against the context of the previous diagnosis.
 - Determine if the condition is IMPROVING, STABLE, or WORSENING.
@@ -269,11 +270,13 @@ If all rules are followed and the media is clear enough for a highly confident v
     const finalDiagnosisText = cleanedOutput;
 
     // 3. Save to DynamoDB
+    const finalCaseId = caseId || generateUUID();
     if (completionAmount !== "No response generated." && userId) {
       const historyItem = {
         userId,
         timestamp,
         id: generateUUID(),
+        caseId: finalCaseId,
         diagnosis: finalDiagnosisText,
         language,
         animalName: animalName || undefined,
@@ -302,7 +305,8 @@ If all rules are followed and the media is clear enough for a highly confident v
 
     return NextResponse.json({
       result: completionAmount,
-      modelUsed: modelUsed
+      modelUsed: modelUsed,
+      caseId: finalCaseId
     });
 
   } catch (error: unknown) {
