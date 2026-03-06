@@ -196,7 +196,7 @@ export interface UsageLog {
 
 type ScreenType = 'home' | 'capture' | 'history' | 'result' | 'timeline' | 'settings';
 
-export default function Home() {
+export default function PashuKrishiRakshak() {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
