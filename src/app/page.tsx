@@ -753,8 +753,17 @@ export default function PashuKrishiRakshak() {
     </div>
   );
 
+  // Get the active case data for display
+  const getActiveCaseData = () => {
+    if (!activeCaseId) return null;
+    return cases.find(c => c.caseId === activeCaseId);
+  };
+
   // Capture/Upload Screen - Streamlined for quick media upload
-  const renderCaptureScreen = () => (
+  const renderCaptureScreen = () => {
+    const activeCaseData = getActiveCaseData();
+    
+    return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="bg-primary text-primary-foreground p-4 safe-area-top">
@@ -771,12 +780,140 @@ export default function PashuKrishiRakshak() {
           >
             <ArrowLeft className="w-6 h-6" />
           </Button>
-          <h1 className="text-xl font-bold">{t.newDiagnosis}</h1>
+          <h1 className="text-xl font-bold">
+            {activeCaseId 
+              ? (language === 'hindi' ? 'प्रगति जाँचें' : language === 'bengali' ? 'অগ্রগতি দেখুন' : 'Check Progress')
+              : t.newDiagnosis
+            }
+          </h1>
         </div>
       </header>
 
       <main className="flex-1 p-4 max-w-lg mx-auto w-full overflow-y-auto">
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Animal Selection Card - Show which animal this is for */}
+          {activeCaseId && activeCaseData ? (
+            // Follow-up for existing animal - show linked animal card
+            <div className="p-4 bg-primary/10 border-2 border-primary rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
+                  <RefreshCw className="w-6 h-6 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-primary font-medium">
+                    {language === 'hindi' ? 'फॉलो-अप जाँच' : language === 'bengali' ? 'ফলো-আপ পরীক্ষা' : 'Follow-up Diagnosis'}
+                  </p>
+                  <p className="text-lg font-bold text-foreground">
+                    {activeCaseData.animalName !== "Unknown" 
+                      ? activeCaseData.animalName 
+                      : (language === 'hindi' ? 'अनाम जानवर' : language === 'bengali' ? 'নামহীন পশু' : 'Unnamed Animal')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {language === 'hindi' 
+                      ? `${activeCaseData.records.length} पिछली जाँच${activeCaseData.records.length > 1 ? 'ें' : ''}`
+                      : language === 'bengali' 
+                        ? `${activeCaseData.records.length}টি পূর্ববর্তী পরীক্ষা`
+                        : `${activeCaseData.records.length} previous visit${activeCaseData.records.length > 1 ? 's' : ''}`}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground"
+                  onClick={() => {
+                    setActiveCaseId(null);
+                    setAnimalName("");
+                  }}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          ) : cases.length > 0 ? (
+            // New diagnosis - show option to select existing animal or add new
+            <div className="space-y-3">
+              <Label className="text-base font-semibold flex items-center gap-2">
+                <Heart className="w-5 h-5 text-primary" />
+                {language === 'hindi' ? 'यह जाँच किसके लिए है?' : language === 'bengali' ? 'এই পরীক্ষা কার জন্য?' : 'Who is this diagnosis for?'}
+              </Label>
+              
+              {/* Existing Animals */}
+              <div className="grid gap-2">
+                {cases.slice(0, 3).map((caseItem) => (
+                  <button
+                    key={caseItem.caseId}
+                    type="button"
+                    className={`w-full p-3 rounded-xl border-2 flex items-center gap-3 transition-all ${
+                      activeCaseId === caseItem.caseId 
+                        ? 'border-primary bg-primary/10' 
+                        : 'border-border bg-card hover:border-primary/50'
+                    }`}
+                    onClick={() => {
+                      setActiveCaseId(caseItem.caseId);
+                      setAnimalName(caseItem.animalName !== "Unknown" ? caseItem.animalName : "");
+                    }}
+                  >
+                    {caseItem.records[0]?.thumbnailBase64 ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img 
+                        src={caseItem.records[0].thumbnailBase64} 
+                        alt="" 
+                        className="w-10 h-10 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                        <Heart className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1 text-left">
+                      <p className="font-semibold text-foreground">
+                        {caseItem.animalName !== "Unknown" 
+                          ? caseItem.animalName 
+                          : (language === 'hindi' ? 'अनाम जानवर' : language === 'bengali' ? 'নামহীন পশু' : 'Unnamed Animal')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {caseItem.records.length} {language === 'hindi' ? 'जाँच' : language === 'bengali' ? 'পরীক্ষা' : 'visit(s)'}
+                      </p>
+                    </div>
+                    {activeCaseId === caseItem.caseId && (
+                      <CheckCircle2 className="w-5 h-5 text-primary" />
+                    )}
+                  </button>
+                ))}
+                
+                {/* New Animal Option */}
+                <button
+                  type="button"
+                  className={`w-full p-3 rounded-xl border-2 border-dashed flex items-center gap-3 transition-all ${
+                    !activeCaseId 
+                      ? 'border-accent bg-accent/10' 
+                      : 'border-border bg-card hover:border-accent/50'
+                  }`}
+                  onClick={() => {
+                    setActiveCaseId(null);
+                    setAnimalName("");
+                  }}
+                >
+                  <div className="w-10 h-10 bg-accent/20 rounded-lg flex items-center justify-center">
+                    <span className="text-xl font-bold text-accent">+</span>
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-semibold text-foreground">
+                      {language === 'hindi' ? 'नया जानवर जोड़ें' : language === 'bengali' ? 'নতুন পশু যোগ করুন' : 'Add New Animal'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {language === 'hindi' ? 'पहली बार जाँच' : language === 'bengali' ? 'প্রথম পরীক্ষা' : 'First-time diagnosis'}
+                    </p>
+                  </div>
+                  {!activeCaseId && (
+                    <CheckCircle2 className="w-5 h-5 text-accent" />
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {/* Media Preview - Primary Focus */}
           {previewUrl && (
             <div className="relative rounded-2xl overflow-hidden bg-muted border-4 border-primary shadow-lg">
@@ -827,6 +964,11 @@ export default function PashuKrishiRakshak() {
                 <Loader2 className="w-8 h-8 mr-4 animate-spin" />
                 {t.analyzing}
               </>
+            ) : activeCaseId ? (
+              <>
+                <RefreshCw className="w-8 h-8 mr-4" />
+                {t.followUp}
+              </>
             ) : (
               <>
                 <Stethoscope className="w-8 h-8 mr-4" />
@@ -837,11 +979,18 @@ export default function PashuKrishiRakshak() {
 
           {/* Helper text */}
           <p className="text-center text-muted-foreground text-sm">
-            {language === 'hindi' 
-              ? 'ऊपर बटन दबाएं - AI आपके जानवर की जांच करेगा' 
-              : language === 'bengali' 
-                ? 'উপরের বোতাম টিপুন - AI আপনার পশুর পরীক্ষা করবে' 
-                : 'Press above to let AI examine your animal'}
+            {activeCaseId 
+              ? (language === 'hindi' 
+                  ? 'AI पिछली जाँच के साथ तुलना करेगा' 
+                  : language === 'bengali' 
+                    ? 'AI পূর্ববর্তী পরীক্ষার সাথে তুলনা করবে' 
+                    : 'AI will compare with previous diagnosis')
+              : (language === 'hindi' 
+                  ? 'ऊपर बटन दबाएं - AI आपके जानवर की जांच करेगा' 
+                  : language === 'bengali' 
+                    ? 'উপরের বোতাম টিপুন - AI আপনার পশুর পরীক্ষা করবে' 
+                    : 'Press above to let AI examine your animal')
+            }
           </p>
 
           {/* Error Display */}
@@ -874,7 +1023,7 @@ export default function PashuKrishiRakshak() {
           {/* Optional Fields - Collapsible */}
           {showOptionalDetails && (
             <div className="space-y-4 p-4 bg-secondary/30 rounded-xl border border-border animate-in slide-in-from-top-2">
-              {/* Animal Name - Optional */}
+              {/* Animal Name - Only show for new animals */}
               {!activeCaseId && (
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -890,6 +1039,13 @@ export default function PashuKrishiRakshak() {
                     onChange={(e) => setAnimalName(e.target.value)}
                     className="w-full h-12 px-4 text-base rounded-xl border-2 border-border bg-card focus:border-primary focus:outline-none transition-colors"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    {language === 'hindi' 
+                      ? 'नाम देने से बाद में खोजना आसान होगा' 
+                      : language === 'bengali' 
+                        ? 'নাম দিলে পরে খুঁজে পাওয়া সহজ হবে' 
+                        : 'Naming helps you find this animal later'}
+                  </p>
                 </div>
               )}
 
@@ -957,6 +1113,7 @@ export default function PashuKrishiRakshak() {
       </main>
     </div>
   );
+  };
 
   // Result Screen
   const renderResultScreen = () => (
