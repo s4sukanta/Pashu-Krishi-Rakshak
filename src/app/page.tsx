@@ -217,6 +217,7 @@ export default function PashuKrishiRakshak() {
   const [animalName, setAnimalName] = useState<string>("");
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [captureMode, setCaptureMode] = useState<'photo' | 'video' | 'upload'>('photo');
+  const [showOptionalDetails, setShowOptionalDetails] = useState<boolean>(false);
 
   const t = translations[language];
 
@@ -584,6 +585,7 @@ export default function PashuKrishiRakshak() {
     setParsedResult(null);
     setError(null);
     setActiveCaseId(null);
+    setShowOptionalDetails(false);
   };
 
   const handleLanguageChange = (newLang: Language) => {
@@ -751,7 +753,7 @@ export default function PashuKrishiRakshak() {
     </div>
   );
 
-  // Capture/Upload Screen
+  // Capture/Upload Screen - Streamlined for quick media upload
   const renderCaptureScreen = () => (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -763,6 +765,7 @@ export default function PashuKrishiRakshak() {
             className="text-primary-foreground hover:bg-primary-foreground/20"
             onClick={() => {
               resetCapture();
+              setShowOptionalDetails(false);
               setCurrentScreen('home');
             }}
           >
@@ -773,15 +776,15 @@ export default function PashuKrishiRakshak() {
       </header>
 
       <main className="flex-1 p-4 max-w-lg mx-auto w-full overflow-y-auto">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Media Preview */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Media Preview - Primary Focus */}
           {previewUrl && (
-            <div className="relative rounded-2xl overflow-hidden bg-muted border-2 border-border">
+            <div className="relative rounded-2xl overflow-hidden bg-muted border-4 border-primary shadow-lg">
               {file?.type.startsWith('video/') ? (
                 <video
                   src={previewUrl}
                   controls
-                  className="w-full max-h-64 object-contain"
+                  className="w-full max-h-72 object-contain"
                   ref={videoRef}
                 />
               ) : (
@@ -789,49 +792,57 @@ export default function PashuKrishiRakshak() {
                 <img
                   src={previewUrl}
                   alt="Preview"
-                  className="w-full max-h-64 object-contain"
+                  className="w-full max-h-72 object-contain"
                 />
               )}
               <Button
                 type="button"
                 variant="destructive"
                 size="sm"
-                className="absolute top-3 right-3"
+                className="absolute top-3 right-3 h-10 px-3"
                 onClick={() => {
                   setFile(null);
                   setPreviewUrl(null);
                 }}
               >
-                <X className="w-4 h-4 mr-1" />
+                <X className="w-5 h-5 mr-1" />
                 {language === 'hindi' ? 'हटाएं' : language === 'bengali' ? 'মুছুন' : 'Remove'}
               </Button>
+              {/* Success indicator */}
+              <div className="absolute bottom-3 left-3 bg-success text-success-foreground px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4" />
+                {language === 'hindi' ? 'फोटो/वीडियो तैयार' : language === 'bengali' ? 'ছবি/ভিডিও প্রস্তুত' : 'Media ready'}
+              </div>
             </div>
           )}
 
-          {/* Animal Name */}
-          {!activeCaseId && (
-            <div className="space-y-2">
-              <Label className="text-base font-semibold">{t.animalName}</Label>
-              <input
-                type="text"
-                placeholder={t.animalNamePlaceholder}
-                value={animalName}
-                onChange={(e) => setAnimalName(e.target.value)}
-                className="w-full h-14 px-4 text-lg rounded-xl border-2 border-border bg-card focus:border-primary focus:outline-none transition-colors"
-              />
-            </div>
-          )}
+          {/* Primary Action - Analyze Button (Most Prominent) */}
+          <Button
+            type="submit"
+            className="w-full h-20 text-2xl font-bold rounded-2xl shadow-lg"
+            disabled={!file || loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-8 h-8 mr-4 animate-spin" />
+                {t.analyzing}
+              </>
+            ) : (
+              <>
+                <Stethoscope className="w-8 h-8 mr-4" />
+                {t.analyze}
+              </>
+            )}
+          </Button>
 
-          {/* Symptoms */}
-          <div className="space-y-2">
-            <Label className="text-base font-semibold">{t.symptoms}</Label>
-            <Textarea
-              placeholder={t.symptomsPlaceholder}
-              value={symptoms}
-              onChange={(e) => setSymptoms(e.target.value)}
-              className="min-h-[100px] text-base rounded-xl border-2 border-border bg-card focus:border-primary resize-none"
-            />
-          </div>
+          {/* Helper text */}
+          <p className="text-center text-muted-foreground text-sm">
+            {language === 'hindi' 
+              ? 'ऊपर बटन दबाएं - AI आपके जानवर की जांच करेगा' 
+              : language === 'bengali' 
+                ? 'উপরের বোতাম টিপুন - AI আপনার পশুর পরীক্ষা করবে' 
+                : 'Press above to let AI examine your animal'}
+          </p>
 
           {/* Error Display */}
           {error && (
@@ -841,24 +852,107 @@ export default function PashuKrishiRakshak() {
             </div>
           )}
 
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            className="w-full h-16 text-xl font-bold rounded-xl"
-            disabled={!file || loading}
+          {/* Optional Details Toggle */}
+          <button
+            type="button"
+            className="w-full flex items-center justify-between p-4 bg-secondary/50 rounded-xl border border-border"
+            onClick={() => setShowOptionalDetails(!showOptionalDetails)}
           >
-            {loading ? (
-              <>
-                <Loader2 className="w-6 h-6 mr-3 animate-spin" />
-                {t.analyzing}
-              </>
-            ) : (
-              <>
-                <Stethoscope className="w-6 h-6 mr-3" />
-                {t.analyze}
-              </>
-            )}
-          </Button>
+            <div className="flex items-center gap-3">
+              <Info className="w-5 h-5 text-muted-foreground" />
+              <span className="text-base text-muted-foreground font-medium">
+                {language === 'hindi' 
+                  ? 'अधिक जानकारी जोड़ें (वैकल्पिक)' 
+                  : language === 'bengali' 
+                    ? 'আরও তথ্য যোগ করুন (ঐচ্ছিক)' 
+                    : 'Add more details (Optional)'}
+              </span>
+            </div>
+            <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${showOptionalDetails ? 'rotate-180' : ''}`} />
+          </button>
+
+          {/* Optional Fields - Collapsible */}
+          {showOptionalDetails && (
+            <div className="space-y-4 p-4 bg-secondary/30 rounded-xl border border-border animate-in slide-in-from-top-2">
+              {/* Animal Name - Optional */}
+              {!activeCaseId && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    {t.animalName}
+                    <span className="text-xs bg-muted px-2 py-0.5 rounded">
+                      {language === 'hindi' ? 'वैकल्पिक' : language === 'bengali' ? 'ঐচ্ছিক' : 'Optional'}
+                    </span>
+                  </Label>
+                  <input
+                    type="text"
+                    placeholder={t.animalNamePlaceholder}
+                    value={animalName}
+                    onChange={(e) => setAnimalName(e.target.value)}
+                    className="w-full h-12 px-4 text-base rounded-xl border-2 border-border bg-card focus:border-primary focus:outline-none transition-colors"
+                  />
+                </div>
+              )}
+
+              {/* Symptoms - Optional */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  {t.symptoms}
+                  <span className="text-xs bg-muted px-2 py-0.5 rounded">
+                    {language === 'hindi' ? 'वैकल्पिक' : language === 'bengali' ? 'ঐচ্ছিক' : 'Optional'}
+                  </span>
+                </Label>
+                <Textarea
+                  placeholder={t.symptomsPlaceholder}
+                  value={symptoms}
+                  onChange={(e) => setSymptoms(e.target.value)}
+                  className="min-h-[80px] text-base rounded-xl border-2 border-border bg-card focus:border-primary resize-none"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {language === 'hindi' 
+                    ? 'लक्षण बताने से बेहतर परिणाम मिलेंगे, लेकिन जरूरी नहीं है' 
+                    : language === 'bengali' 
+                      ? 'লক্ষণ জানালে ভালো ফলাফল পাবেন, কিন্তু বাধ্যতামূলক নয়' 
+                      : 'Adding symptoms helps get better results, but is not required'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Retake/Change Photo Option */}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              className="flex-1 relative bg-card border-2 border-border rounded-xl p-4 flex items-center justify-center gap-2 hover:border-primary transition-colors"
+            >
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                onChange={handleFileChange}
+              />
+              <Camera className="w-5 h-5 text-primary" />
+              <span className="text-sm font-medium">
+                {language === 'hindi' ? 'नई फोटो' : language === 'bengali' ? 'নতুন ছবি' : 'New Photo'}
+              </span>
+            </button>
+            <button
+              type="button"
+              className="flex-1 relative bg-card border-2 border-border rounded-xl p-4 flex items-center justify-center gap-2 hover:border-accent transition-colors"
+            >
+              <input
+                type="file"
+                accept="video/*"
+                capture="environment"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                onChange={handleFileChange}
+              />
+              <Video className="w-5 h-5 text-accent" />
+              <span className="text-sm font-medium">
+                {language === 'hindi' ? 'नया वीडियो' : language === 'bengali' ? 'নতুন ভিডিও' : 'New Video'}
+              </span>
+            </button>
+          </div>
         </form>
       </main>
     </div>
