@@ -1,18 +1,161 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { ArrowLeft, UploadCloud, Loader2, Sparkles, Image as ImageIcon, Camera, Trash2, Video, RefreshCw, Clock, History, Calendar, ChevronRight, Activity, HardDrive, Database, Copy, Save, CheckCircle2, AlertTriangle, AlertCircle, ChevronDown, MapPin } from "lucide-react";
+import { 
+  Camera, 
+  Video, 
+  History, 
+  Settings, 
+  ArrowLeft, 
+  Upload, 
+  Loader2, 
+  AlertTriangle, 
+  CheckCircle2, 
+  AlertCircle,
+  Phone,
+  Heart,
+  Stethoscope,
+  Pill,
+  Home,
+  ChevronDown,
+  X,
+  Volume2,
+  VolumeX,
+  RefreshCw,
+  Trash2,
+  Info,
+  Languages
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { CaseDashboard } from "@/components/CaseDashboard";
-import { CaseTimeline } from "@/components/CaseTimeline";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { AccessibleCaseDashboard } from "@/components/AccessibleCaseDashboard";
+import { AccessibleCaseTimeline } from "@/components/AccessibleCaseTimeline";
+
+// Language translations
+const translations = {
+  english: {
+    appName: "Pashu Krishi Rakshak",
+    tagline: "AI Animal Doctor",
+    takePhoto: "Take Photo",
+    recordVideo: "Record Video",
+    viewHistory: "View History",
+    settings: "Settings",
+    uploadMedia: "Upload Photo/Video",
+    symptoms: "Describe Symptoms",
+    symptomsPlaceholder: "What problems do you see? (e.g., not eating, fever, wound)",
+    animalName: "Animal Name/Tag",
+    animalNamePlaceholder: "e.g., Lakshmi, Tag #23",
+    language: "Language",
+    analyze: "Get Diagnosis",
+    analyzing: "Analyzing...",
+    back: "Back",
+    result: "Diagnosis Result",
+    disease: "Problem Found",
+    confidence: "Confidence",
+    medicines: "Medicines",
+    careSteps: "Home Care Steps",
+    warning: "See a Doctor",
+    emergency: "EMERGENCY - Call Vet Now",
+    nearestPharmacy: "Nearest Medicine Shop",
+    newDiagnosis: "New Diagnosis",
+    followUp: "Check Progress",
+    noHistory: "No previous records",
+    startFirst: "Take a photo to start",
+    cases: "My Animals",
+    viewCase: "View Details",
+    deleteCase: "Delete",
+    improving: "Getting Better",
+    worsening: "Getting Worse",
+    stable: "No Change",
+    visit: "Visit",
+    myCases: "My Animals",
+    selectLanguage: "Select Language",
+  },
+  hindi: {
+    appName: "पशु कृषि रक्षक",
+    tagline: "AI पशु चिकित्सक",
+    takePhoto: "फोटो लें",
+    recordVideo: "वीडियो बनाएं",
+    viewHistory: "पुराने रिकॉर्ड",
+    settings: "सेटिंग्स",
+    uploadMedia: "फोटो/वीडियो अपलोड करें",
+    symptoms: "लक्षण बताएं",
+    symptomsPlaceholder: "क्या समस्या है? (जैसे, खाना नहीं खा रहा, बुखार, घाव)",
+    animalName: "जानवर का नाम/टैग",
+    animalNamePlaceholder: "जैसे, लक्ष्मी, टैग #23",
+    language: "भाषा",
+    analyze: "जाँच करें",
+    analyzing: "जाँच हो रही है...",
+    back: "वापस",
+    result: "जाँच का परिणाम",
+    disease: "समस्या मिली",
+    confidence: "विश्वास",
+    medicines: "दवाइयाँ",
+    careSteps: "घर पर देखभाल",
+    warning: "डॉक्टर को दिखाएं",
+    emergency: "आपातकालीन - अभी डॉक्टर को बुलाएं",
+    nearestPharmacy: "नज़दीकी दवा की दुकान",
+    newDiagnosis: "नई जाँच",
+    followUp: "प्रगति जाँचें",
+    noHistory: "कोई पुराना रिकॉर्ड नहीं",
+    startFirst: "शुरू करने के लिए फोटो लें",
+    cases: "मेरे जानवर",
+    viewCase: "विवरण देखें",
+    deleteCase: "हटाएं",
+    improving: "ठीक हो रहा है",
+    worsening: "बिगड़ रहा है",
+    stable: "कोई बदलाव नहीं",
+    visit: "मुलाकात",
+    myCases: "मेरे जानवर",
+    selectLanguage: "भाषा चुनें",
+  },
+  bengali: {
+    appName: "পশু কৃষি রক্ষক",
+    tagline: "AI পশু চিকিৎসক",
+    takePhoto: "ছবি তুলুন",
+    recordVideo: "ভিডিও করুন",
+    viewHistory: "পুরানো রেকর্ড",
+    settings: "সেটিংস",
+    uploadMedia: "ছবি/ভিডিও আপলোড করুন",
+    symptoms: "লক্ষণ বলুন",
+    symptomsPlaceholder: "কি সমস্যা? (যেমন, খাচ্ছে না, জ্বর, ক্ষত)",
+    animalName: "পশুর নাম/ট্যাগ",
+    animalNamePlaceholder: "যেমন, লক্ষ্মী, ট্যাগ #২৩",
+    language: "ভাষা",
+    analyze: "পরীক্ষা করুন",
+    analyzing: "পরীক্ষা হচ্ছে...",
+    back: "ফিরে যান",
+    result: "পরীক্ষার ফলাফল",
+    disease: "সমস্যা পাওয়া গেছে",
+    confidence: "বিশ্বাস",
+    medicines: "ওষুধ",
+    careSteps: "বাড়িতে যত্ন",
+    warning: "ডাক্তার দেখান",
+    emergency: "জরুরি - এখনই ডাক্তার ডাকুন",
+    nearestPharmacy: "নিকটতম ওষুধের দোকান",
+    newDiagnosis: "নতুন পরীক্ষা",
+    followUp: "অগ্রগতি দেখুন",
+    noHistory: "কোনো পুরানো রেকর্ড নেই",
+    startFirst: "শুরু করতে ছবি তুলুন",
+    cases: "আমার পশু",
+    viewCase: "বিস্তারিত দেখুন",
+    deleteCase: "মুছুন",
+    improving: "ভালো হচ্ছে",
+    worsening: "খারাপ হচ্ছে",
+    stable: "কোনো পরিবর্তন নেই",
+    visit: "দেখা",
+    myCases: "আমার পশু",
+    selectLanguage: "ভাষা নির্বাচন করুন",
+  },
+};
+
+type Language = keyof typeof translations;
 
 function generateUUID() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -51,129 +194,39 @@ export interface UsageLog {
   inputMediaSizeBytes: number;
 }
 
+type ScreenType = 'home' | 'capture' | 'history' | 'result' | 'timeline' | 'settings';
+
 export default function Home() {
+  const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [language, setLanguage] = useState<string>("english");
+  const [language, setLanguage] = useState<Language>("hindi");
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [parsedResult, setParsedResult] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [symptoms, setSymptoms] = useState<string>("");
-  const [previousDiagnosis, setPreviousDiagnosis] = useState<DiagnosisRecord | null>(null);
   const [history, setHistory] = useState<DiagnosisRecord[]>([]);
   const [usageLogs, setUsageLogs] = useState<UsageLog[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const [userId, setUserId] = useState<string>("");
-  const [inputUserId, setInputUserId] = useState<string>("");
-
-  // Case/Timeline UI States
   const [cases, setCases] = useState<Case[]>([]);
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
-  const [isCreatingNewCase, setIsCreatingNewCase] = useState<boolean>(false);
-
-  // NEW History UI States
   const [animalName, setAnimalName] = useState<string>("");
-  const [historyFilter, setHistoryFilter] = useState<string>("all");
+  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+  const [captureMode, setCaptureMode] = useState<'photo' | 'video' | 'upload'>('photo');
 
-  // NEW Expandable Details UI States
-  const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(false);
-  const [wikiImageUrl, setWikiImageUrl] = useState<string | null>(null);
-  const [isFetchingWiki, setIsFetchingWiki] = useState<boolean>(false);
-
-  // NEW Location States
-  const [nearestPharmacy, setNearestPharmacy] = useState<{ name: string; distanceKm: string } | null>(null);
-  const [isFetchingPharmacy, setIsFetchingPharmacy] = useState<boolean>(false);
-
-  useEffect(() => {
-    const fetchWikiImage = async (diseaseName: string) => {
-      // Avoid fetching for unclear media or explicit unknowns
-      if (!diseaseName || diseaseName.includes("Media Unclear") || diseaseName.toLowerCase() === "unknown") {
-        setWikiImageUrl(null);
-        return;
-      }
-      setIsFetchingWiki(true);
-      setWikiImageUrl(null);
-      try {
-        const queryTerm = encodeURIComponent(diseaseName);
-        const url = `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&format=json&piprop=original&titles=${queryTerm}&origin=*`;
-        const res = await fetch(url);
-        const data = await res.json();
-        const pages = data.query?.pages;
-        if (pages) {
-          const pageId = Object.keys(pages)[0];
-          if (pageId && pageId !== "-1" && pages[pageId].original?.source) {
-            setWikiImageUrl(pages[pageId].original.source);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch Wikipedia image", err);
-      } finally {
-        setIsFetchingWiki(false);
-      }
-    };
-
-    if (parsedResult?.diseaseIdentification) {
-      fetchWikiImage(parsedResult.diseaseIdentification);
-      setIsDetailsOpen(false); // Reset toggle state on new diagnosis
-    }
-  }, [parsedResult?.diseaseIdentification]);
-
-  useEffect(() => {
-    if (parsedResult?.prescription?.medicines?.length > 0) {
-      if ("geolocation" in navigator) {
-        setIsFetchingPharmacy(true);
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            try {
-              const res = await fetch('/api/location', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  latitude: position.coords.latitude,
-                  longitude: position.coords.longitude,
-                }),
-              });
-              const data = await res.json();
-              if (res.ok && data.name) {
-                setNearestPharmacy({ name: data.name, distanceKm: data.distanceKm });
-              } else {
-                setNearestPharmacy(null);
-              }
-            } catch (err) {
-              console.error("Failed to fetch nearest pharmacy location", err);
-              setNearestPharmacy(null);
-            } finally {
-              setIsFetchingPharmacy(false);
-            }
-          },
-          (error) => {
-            // Mobile browsers over local IP (HTTP instead of HTTPS) will block Geolocation
-            // We just catch it silently and remove the loading spinner
-            console.warn("Geolocation blocked or unavailable in this context (likely missing HTTPS).", error?.message || "");
-            setIsFetchingPharmacy(false);
-          },
-          { timeout: 10000, maximumAge: 60000, enableHighAccuracy: false }
-        );
-      } else {
-        setIsFetchingPharmacy(false);
-      }
-    } else {
-      setNearestPharmacy(null);
-    }
-  }, [parsedResult]);
+  const t = translations[language];
 
   const groupCases = (historyRecords: DiagnosisRecord[]) => {
     const caseMap = new Map<string, Case>();
-
-    // Sort chronologically (oldest first) to build the timeline correctly
     const sortedHistory = [...historyRecords].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     sortedHistory.forEach(record => {
       const cId = record.caseId || record.id;
-      let subjectType = "other";
+      let subjectType = "animal";
       let status = "not_applicable";
       try {
         const parsed = JSON.parse(record.diagnosis);
@@ -216,7 +269,6 @@ export default function Home() {
     }
   };
 
-  // Load user Id and fetch History & Logs on mount
   useEffect(() => {
     let currentUserId = localStorage.getItem("pashu_krishi_user_id");
     if (!currentUserId) {
@@ -224,18 +276,14 @@ export default function Home() {
       localStorage.setItem("pashu_krishi_user_id", currentUserId);
     }
     setUserId(currentUserId);
-    setInputUserId(currentUserId);
     fetchRemoteData(currentUserId);
-  }, []);
 
-  const handleSaveUserId = () => {
-    if (inputUserId.trim() && inputUserId !== userId) {
-      setUserId(inputUserId.trim());
-      localStorage.setItem("pashu_krishi_user_id", inputUserId.trim());
-      // Re-fetch data for the new user ID
-      fetchRemoteData(inputUserId.trim());
+    // Load saved language preference
+    const savedLang = localStorage.getItem("pashu_krishi_language") as Language;
+    if (savedLang && translations[savedLang]) {
+      setLanguage(savedLang);
     }
-  };
+  }, []);
 
   const saveToHistory = async (newResult: string, lang: string, existingCaseId?: string, animalNameStr?: string, thumbnailBase64Str?: string) => {
     let updatedHistory = [...history];
@@ -249,22 +297,18 @@ export default function Home() {
       thumbnailBase64: thumbnailBase64Str || undefined
     };
     updatedHistory = [newRecord, ...updatedHistory];
-
     setHistory(updatedHistory);
     groupCases(updatedHistory);
-    // Note: The actual DDB saving happens server-side in /api/analyze now
   };
 
   const handleDeleteCase = async (caseIdToDelete: string) => {
-    // Optimistic UI Update
     const newHistory = history.filter(r => (r.caseId || r.id) !== caseIdToDelete);
     setHistory(newHistory);
     groupCases(newHistory);
 
-    // if deleting active case, go back to dash
     if (activeCaseId === caseIdToDelete) {
       setActiveCaseId(null);
-      setIsCreatingNewCase(false);
+      setCurrentScreen('history');
     }
 
     try {
@@ -279,17 +323,15 @@ export default function Home() {
   };
 
   const handleDeleteRecord = async (timestampToDelete: string) => {
-    // Optimistic UI Update
     const newHistory = history.filter(r => r.timestamp !== timestampToDelete);
     setHistory(newHistory);
     groupCases(newHistory);
 
-    // if deleting the last record of an active case, close it
     if (activeCaseId) {
       const remaining = newHistory.filter(r => (r.caseId || r.id) === activeCaseId);
       if (remaining.length === 0) {
         setActiveCaseId(null);
-        setIsCreatingNewCase(false);
+        setCurrentScreen('history');
       }
     }
 
@@ -304,7 +346,6 @@ export default function Home() {
     }
   };
 
-  // Utility for generating a small inline thumbnail
   const generateThumbnail = (file: File): Promise<string> => {
     return new Promise((resolve) => {
       const isVideo = file.type.startsWith('video/');
@@ -316,7 +357,6 @@ export default function Home() {
         const ctx = canvas.getContext('2d');
         if (!ctx) return resolve("");
 
-        // Calculate aspect ratio for 64x64 max bounding box
         const size = 64;
         const width = isVideo ? (mediaElement as HTMLVideoElement).videoWidth : (mediaElement as HTMLImageElement).width;
         const height = isVideo ? (mediaElement as HTMLVideoElement).videoHeight : (mediaElement as HTMLImageElement).height;
@@ -325,7 +365,6 @@ export default function Home() {
         canvas.width = size;
         canvas.height = size;
 
-        // Fill white background just in case
         ctx.fillStyle = '#f3f4f6';
         ctx.fillRect(0, 0, size, size);
 
@@ -344,7 +383,7 @@ export default function Home() {
         video.src = url;
         video.muted = true;
         video.playsInline = true;
-        video.currentTime = 1.0; // grab 1 second in
+        video.currentTime = 1.0;
         video.addEventListener('seeked', onLoaded, { once: true });
         video.addEventListener('error', () => resolve(""), { once: true });
       } else {
@@ -361,13 +400,12 @@ export default function Home() {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
       setPreviewUrl(URL.createObjectURL(selectedFile));
-      setResult(null); // Clear previous result
+      setResult(null);
       setParsedResult(null);
       setError(null);
+      setCurrentScreen('capture');
 
-      // Async generate thumbnail
       const thumb = await generateThumbnail(selectedFile);
-      // We will store this locally on the window or component state briefly to append it later
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any)._tempThumbnailBase64 = thumb;
     }
@@ -389,7 +427,6 @@ export default function Home() {
           return new Promise((resolveFrame) => {
             const onSeeked = () => {
               const canvas = document.createElement('canvas');
-              // Scale down slightly if video is huge to save Bedrock payload size and processing time
               const scale = Math.min(1, 1280 / Math.max(video.videoWidth, 1));
               canvas.width = (video.videoWidth || 640) * scale;
               canvas.height = (video.videoHeight || 480) * scale;
@@ -419,6 +456,25 @@ export default function Home() {
     });
   };
 
+  const speakResult = (text: string) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = language === 'hindi' ? 'hi-IN' : language === 'bengali' ? 'bn-IN' : 'en-IN';
+      utterance.rate = 0.9;
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => setIsSpeaking(false);
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const stopSpeaking = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) {
@@ -439,12 +495,10 @@ export default function Home() {
       formData.append("symptoms", symptoms.trim());
     }
 
-    // If activeCaseId is set, this is a follow-up on an existing case
     if (activeCaseId) {
       formData.append("caseId", activeCaseId);
       const activeCase = cases.find(c => c.caseId === activeCaseId);
       if (activeCase) {
-        // Build timeline text for LLM context
         const timelineText = activeCase.records.map((r, i) => `[Visit ${i + 1} on ${r.timestamp}]:\n${r.diagnosis}`).join('\n\n---\n\n');
         formData.append("previousDiagnosis", timelineText);
       }
@@ -460,14 +514,12 @@ export default function Home() {
     }
 
     if (file.type.startsWith('video/')) {
-      // Automatically extract 4 high-quality frames spread evenly throughout the video
       const frames = await extractFrames(file, 4);
       if (frames.length > 0) {
         frames.forEach((blob, index) => {
           formData.append("media", blob, `frame_${index}.jpg`);
         });
       } else {
-        // Fallback: send raw video if extraction failed
         formData.append("media", file);
       }
     } else {
@@ -488,12 +540,18 @@ export default function Home() {
 
       setResult(data.result);
       try {
-        setParsedResult(JSON.parse(data.result));
+        const parsed = JSON.parse(data.result);
+        setParsedResult(parsed);
+        
+        // Auto-speak the diagnosis
+        if (parsed.diseaseIdentification) {
+          const speakText = `${t.disease}: ${parsed.diseaseIdentification}. ${parsed.diseaseDetails?.description || ''}`;
+          setTimeout(() => speakResult(speakText), 500);
+        }
       } catch {
         setParsedResult(null);
       }
 
-      // Update local state optimistic UI
       saveToHistory(data.result, language, activeCaseId ? activeCaseId : data.caseId, animalName.trim(), tempThumb);
 
       const newLog: UsageLog = {
@@ -504,14 +562,11 @@ export default function Home() {
       };
       setUsageLogs([newLog, ...usageLogs]);
 
-      // If we created a new case or followed up, Ensure we stay on/jump to the timeline
       if (data.caseId) {
         setActiveCaseId(data.caseId);
-      } else if (activeCaseId) {
-        // fallback to ensure we stick around
-        setActiveCaseId(activeCaseId);
       }
-      setIsCreatingNewCase(false);
+
+      setCurrentScreen('result');
 
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to analyze the image.");
@@ -520,661 +575,675 @@ export default function Home() {
     }
   };
 
-  return (
-    <main className="min-h-screen bg-gray-50/50 flex flex-col items-center justify-center p-4 sm:p-8">
-      <div className="max-w-4xl w-full mx-auto space-y-8">
+  const resetCapture = () => {
+    setFile(null);
+    setPreviewUrl(null);
+    setSymptoms("");
+    setAnimalName("");
+    setResult(null);
+    setParsedResult(null);
+    setError(null);
+    setActiveCaseId(null);
+  };
 
-        {/* Header Section */}
-        <div className="text-center space-y-4 relative">
+  const handleLanguageChange = (newLang: Language) => {
+    setLanguage(newLang);
+    localStorage.setItem("pashu_krishi_language", newLang);
+  };
 
-          <div className="absolute right-0 top-0 flex items-center gap-2">
-
-            {/* Device Sync Key Sheet */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="icon" className="shadow-sm border-gray-200">
-                  <Database className="w-4 h-4 text-purple-600" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent className="w-full sm:max-w-md">
-                <SheetHeader className="mb-6">
-                  <SheetTitle className="flex items-center gap-2">
-                    <Database className="w-5 h-5 text-purple-600" />
-                    Device Sync Key
-                  </SheetTitle>
-                  <SheetDescription>
-                    Your history is saved to AWS under a unique Device Sync Key. You can use this key on other devices to access your animal records.
-                  </SheetDescription>
-                </SheetHeader>
-
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="current-key">Your Current Key</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="current-key"
-                        value={inputUserId}
-                        onChange={(e) => setInputUserId(e.target.value)}
-                        className="font-mono text-sm bg-purple-50"
-                      />
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="icon"
-                        onClick={() => navigator.clipboard.writeText(userId)}
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-sm text-gray-600">
-                    <p className="mb-3">To sync your history from another device, paste its Device Sync Key here and click Save.</p>
-                    <Button
-                      className="w-full"
-                      onClick={handleSaveUserId}
-                      disabled={inputUserId === userId || !inputUserId.trim()}
-                    >
-                      <Save className="w-4 h-4 mr-2" />
-                      Apply Sync Key
-                    </Button>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
-
-            {/* Usage Logs Sheet */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="icon" className="shadow-sm border-gray-200">
-                  <Activity className="w-4 h-4 text-emerald-600" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-                <SheetHeader className="mb-6">
-                  <SheetTitle className="flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-emerald-600" />
-                    Usage & Telemetry Logs
-                  </SheetTitle>
-                  <SheetDescription>
-                    Device-local tracking of model invocations and data volume.
-                  </SheetDescription>
-                </SheetHeader>
-
-                {usageLogs.length === 0 ? (
-                  <div className="text-center text-gray-400 py-10">
-                    <Activity className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                    <p>No usage data recorded yet.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    {/* Aggregated Stats */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl text-center">
-                        <div className="text-2xl font-black text-emerald-700">{usageLogs.length}</div>
-                        <div className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mt-1">Total Calls</div>
-                      </div>
-                      <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl text-center">
-                        <div className="text-2xl font-black text-blue-700">
-                          {(usageLogs.reduce((acc, log) => acc + log.inputMediaSizeBytes, 0) / 1024 / 1024).toFixed(2)}
-                        </div>
-                        <div className="text-xs font-semibold text-blue-600 uppercase tracking-wider mt-1">Total MB Used</div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-bold text-gray-900 border-b pb-2">Itemized Invocations</h4>
-                      {usageLogs.map((log) => (
-                        <div key={log.id} className="p-3 border border-gray-100 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow flex items-start justify-between">
-                          <div className="space-y-1">
-                            <div className="flex items-center text-[11px] text-gray-400 font-medium">
-                              <Calendar className="w-3 h-3 mr-1" />
-                              {new Date(log.timestamp).toLocaleString()}
-                            </div>
-                            <div className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
-                              <Sparkles className="w-3 h-3 text-purple-500" />
-                              {log.modelUsed}
-                            </div>
-                          </div>
-                          <div className="flex items-center text-xs font-mono font-medium text-gray-600 bg-gray-50 px-2 py-1 rounded">
-                            <HardDrive className="w-3 h-3 mr-1 text-gray-400" />
-                            {(log.inputMediaSizeBytes / 1024).toFixed(1)} KB
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </SheetContent>
-            </Sheet>
-
-            {/* History Sheet Removed - Now using CaseDashboard on main screen */}
+  // Home Screen
+  const renderHomeScreen = () => (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="bg-primary text-primary-foreground p-4 safe-area-top">
+        <div className="flex items-center justify-between max-w-lg mx-auto">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-primary-foreground/20 rounded-full flex items-center justify-center">
+              <Stethoscope className="w-7 h-7" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold">{t.appName}</h1>
+              <p className="text-sm opacity-90">{t.tagline}</p>
+            </div>
           </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-primary-foreground hover:bg-primary-foreground/20"
+            onClick={() => setCurrentScreen('settings')}
+          >
+            <Settings className="w-6 h-6" />
+          </Button>
+        </div>
+      </header>
 
-          <div className="inline-flex items-center justify-center p-3 bg-blue-100 rounded-full mb-4">
-            <Sparkles className="w-8 h-8 text-blue-600" />
-          </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900">
-            Image Analysis with AWS Bedrock
-          </h1>
-          <p className="text-lg text-gray-500 max-w-2xl mx-auto">
-            Upload an image and let Amazon Nova Pro analyze it. Powered by Next.js, shadcn/ui, and AWS.
-          </p>
+      {/* Main Content */}
+      <main className="flex-1 p-4 max-w-lg mx-auto w-full">
+        {/* Language Selector */}
+        <div className="mb-6">
+          <Select value={language} onValueChange={(v) => handleLanguageChange(v as Language)}>
+            <SelectTrigger className="w-full h-14 text-lg bg-card border-2 border-border">
+              <div className="flex items-center gap-3">
+                <Languages className="w-6 h-6 text-primary" />
+                <SelectValue placeholder={t.selectLanguage} />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="hindi" className="text-lg py-3">हिंदी (Hindi)</SelectItem>
+              <SelectItem value="english" className="text-lg py-3">English</SelectItem>
+              <SelectItem value="bengali" className="text-lg py-3">বাংলা (Bengali)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Dynamic Main Content */}
-        {(() => {
-          const showResultCard = !activeCaseId || loading || result || error;
-          const uploadFormContent = (
-            <div className={`grid grid-cols-1 ${showResultCard ? 'md:grid-cols-2' : 'max-w-xl mx-auto'} gap-8 w-full animate-in fade-in slide-in-from-top-4 duration-500 relative z-10`}>
-              {/* Upload Form Card */}
-              <div className="space-y-4 w-full">
-                <Card className="shadow-lg border-0 ring-1 ring-gray-200">
-                  <CardHeader>
-                    <CardTitle>{activeCaseId ? "What is the animal's current status?" : "New Diagnosis"}</CardTitle>
-                    <CardDescription>
-                      {activeCaseId
-                        ? "Upload a new photo/video to check progress."
-                        : "Upload a photo or video to get an instant diagnosis and treatment plan."}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-6">
-
-                      {/* File Upload Area */}
-                      <div className="space-y-3">
-                        <Label>Provide Media</Label>
-
-                        {!previewUrl ? (
-                          <div className="space-y-4">
-                            {/* Mobile Only: Native Camera Intputs */}
-                            <div className="grid grid-cols-2 gap-4 sm:hidden">
-                              {/* Take Photo Button */}
-                              <div className="relative border-2 border-blue-200 bg-blue-50/50 rounded-xl p-4 hover:bg-blue-100 transition-colors flex flex-col items-center justify-center text-center cursor-pointer h-32 group shadow-sm">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  capture="environment"
-                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                  onChange={handleFileChange}
-                                />
-                                <Camera className="w-8 h-8 text-blue-600 mb-2 group-hover:scale-110 transition-transform duration-200" />
-                                <span className="text-sm font-semibold text-blue-900">Take Photo</span>
-                              </div>
-
-                              {/* Record Video Button */}
-                              <div className="relative border-2 border-blue-200 bg-blue-50/50 rounded-xl p-4 hover:bg-blue-100 transition-colors flex flex-col items-center justify-center text-center cursor-pointer h-32 group shadow-sm">
-                                <input
-                                  type="file"
-                                  accept="video/*"
-                                  capture="environment"
-                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                  onChange={handleFileChange}
-                                />
-                                <Video className="w-8 h-8 text-blue-600 mb-2 group-hover:scale-110 transition-transform duration-200" />
-                                <span className="text-sm font-semibold text-blue-900">Record Video</span>
-                              </div>
-                            </div>
-
-                            {/* File Upload Button (Primary on desktop) */}
-                            <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-4 hover:bg-gray-50 transition-colors flex flex-col items-center justify-center text-center cursor-pointer h-28 sm:h-48 group">
-                              <input
-                                type="file"
-                                accept="image/jpeg, image/png, image/webp, video/mp4, video/webm, video/quicktime"
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                onChange={handleFileChange}
-                              />
-                              <UploadCloud className="w-8 h-8 text-gray-400 mb-2 group-hover:text-gray-600 transition-colors" />
-                              <span className="text-sm font-medium text-gray-700">Upload from Gallery</span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="relative border-2 border-gray-200 rounded-xl p-2 bg-black/5 overflow-hidden h-64 flex items-center justify-center group">
-                            <div className="absolute inset-0 w-full h-full z-0 flex items-center justify-center p-2">
-                              {file?.type.startsWith('video/') ? (
-                                <video
-                                  src={previewUrl}
-                                  controls
-                                  className="max-w-full max-h-full object-contain rounded-lg shadow-sm"
-                                />
-                              ) : (
-                                /* eslint-disable-next-line @next/next/no-img-element */
-                                <img
-                                  src={previewUrl}
-                                  alt="Preview"
-                                  className="max-w-full max-h-full object-contain rounded-lg shadow-sm"
-                                />
-                              )}
-                            </div>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => {
-                                setFile(null);
-                                setPreviewUrl(null);
-                                setResult(null);
-                                setParsedResult(null);
-                              }}
-                              className="absolute top-3 right-3 shadow-md z-20 opacity-90 hover:opacity-100 transition-opacity"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Remove Media
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Optional Symptoms Input */}
-                      <div className="space-y-3">
-                        <Label htmlFor="symptoms">Symptoms or Context (Optional)</Label>
-                        <Textarea
-                          id="symptoms"
-                          placeholder="e.g., The animal has been refusing to eat for 2 days and is lethargic..."
-                          className="resize-none h-24"
-                          value={symptoms}
-                          onChange={(e) => setSymptoms(e.target.value)}
-                        />
-                      </div>
-
-                      {/* Animal Nickname Input */}
-                      {!activeCaseId && (
-                        <div className="space-y-3">
-                          <Label htmlFor="animalName">Animal ID / Nickname (Optional)</Label>
-                          <Input
-                            id="animalName"
-                            placeholder="e.g., Buddy, Tag #432, Fido"
-                            value={animalName}
-                            onChange={(e) => setAnimalName(e.target.value)}
-                          />
-                        </div>
-                      )}
-
-                      {/* Language Selection */}
-                      {!activeCaseId && (
-                        <div className="space-y-3">
-                          <Label htmlFor="language">Output Language</Label>
-                          <Select value={language} onValueChange={setLanguage}>
-                            <SelectTrigger id="language" className="w-full">
-                              <SelectValue placeholder="Select a language" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="english">English</SelectItem>
-                              <SelectItem value="hindi">Hindi (हिंदी)</SelectItem>
-                              <SelectItem value="bengali">Bengali (বাংলা)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-
-                      <Button
-                        type="submit"
-                        className="w-full h-12 text-md font-medium"
-                        disabled={!file || loading}
-                      >
-                        {loading ? (
-                          <>
-                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                            Analyzing Media...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="mr-2 h-5 w-5" />
-                            {activeCaseId ? "Evaluate Progress" : "Get Veterinary Diagnosis"}
-                          </>
-                        )}
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Results Card */}
-              {showResultCard && (
-                <Card className="shadow-lg border-0 ring-1 ring-gray-200 bg-white flex flex-col h-full">
-                  <CardHeader>
-                    <CardTitle>Analysis Result</CardTitle>
-                    <CardDescription>The AI&apos;s response will appear here.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-grow flex flex-col">
-
-                    {error && (
-                      <div className="p-4 bg-red-50 text-red-700 rounded-lg text-sm border border-red-200">
-                        <p className="font-semibold">Error</p>
-                        <p>{error}</p>
-                      </div>
-                    )}
-
-                    {loading && !result && !error && (
-                      <div className="flex-grow flex flex-col items-center justify-center text-gray-400 space-y-4 min-h-[200px]">
-                        <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
-                        <p className="text-sm font-medium animate-pulse">Processing through AWS Bedrock...</p>
-                      </div>
-                    )}
-
-                    {!loading && !result && !error && (
-                      <div className="flex-grow flex flex-col items-center justify-center text-gray-400 space-y-3 min-h-[200px]">
-                        <ImageIcon className="w-12 h-12 opacity-20" />
-                        <p className="text-sm">Upload an image or video to get started</p>
-                      </div>
-                    )}
-
-                    {parsedResult && !loading && (
-                      <div className="space-y-4 overflow-y-auto max-h-[600px] pb-6 pr-2 scrollbar-none">
-
-                        {/* Confidence Banner */}
-                        {parsedResult.confidenceScore >= 60 && !parsedResult.recommendHumanVet ? (
-                          <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
-                            <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
-                            <div>
-                              <p className="font-bold text-green-900">AI Assessment Confident ({parsedResult.confidenceScore}%)</p>
-                              <p className="text-sm text-green-700">See the recommended home treatment plan below.</p>
-                            </div>
-                          </div>
-                        ) : parsedResult.confidenceScore >= 30 ? (
-                          <div className="p-3 bg-yellow-50 border border-yellow-300 rounded-lg flex items-start gap-3">
-                            <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5 shrink-0" />
-                            <div>
-                              <p className="font-bold text-yellow-900">AI Uncertainty Warning ({parsedResult.confidenceScore}%)</p>
-                              <p className="text-sm text-yellow-800">The AI is uncertain. We highly recommend consulting a human veterinarian before proceeding with treatment.</p>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="p-3 bg-red-50 border border-red-300 rounded-lg flex items-start gap-3">
-                            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
-                            <div>
-                              <p className="font-bold text-red-900">CRITICAL: Severe Uncertainty ({parsedResult.confidenceScore}%)</p>
-                              <p className="text-sm text-red-800">Diagnosis is highly uncertain due to unclear media. Do not rely heavily on this prescription.</p>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Follow-Up Assessment Banner */}
-                        {parsedResult.followUpAssessment && parsedResult.followUpAssessment.status !== "not_applicable" && (
-                          <div className={`p-4 rounded-lg flex items-start gap-3 border ${parsedResult.followUpAssessment.status === "improving" ? "bg-emerald-50 border-emerald-200" :
-                            parsedResult.followUpAssessment.status === "worsening" ? "bg-rose-50 border-rose-200" :
-                              "bg-blue-50 border-blue-200" // unchanged or stable
-                            }`}>
-                            {parsedResult.followUpAssessment.status === "improving" ? (
-                              <Activity className="w-6 h-6 text-emerald-600 shrink-0" />
-                            ) : parsedResult.followUpAssessment.status === "worsening" ? (
-                              <AlertTriangle className="w-6 h-6 text-rose-600 shrink-0" />
-                            ) : (
-                              <Sparkles className="w-6 h-6 text-blue-600 shrink-0" />
-                            )}
-                            <div>
-                              <p className={`font-bold capitalize ${parsedResult.followUpAssessment.status === "improving" ? "text-emerald-900" :
-                                parsedResult.followUpAssessment.status === "worsening" ? "text-rose-900" :
-                                  "text-blue-900"
-                                }`}>
-                                Condition is {parsedResult.followUpAssessment.status}
-                              </p>
-                              <p className={`text-sm mt-1 leading-snug ${parsedResult.followUpAssessment.status === "improving" ? "text-emerald-800" :
-                                parsedResult.followUpAssessment.status === "worsening" ? "text-rose-800" :
-                                  "text-blue-800"
-                                }`}>
-                                {parsedResult.followUpAssessment.notes}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="p-3 border border-gray-100 rounded-lg bg-gray-50/50">
-                            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Identified Subject</p>
-                            <p className="text-sm font-semibold text-gray-900 capitalize">{parsedResult.subjectType}</p>
-                          </div>
-                          <div className="p-3 border border-gray-100 rounded-lg bg-gray-50/50">
-                            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Diagnosis</p>
-                            <p className="text-sm font-semibold text-gray-900">{parsedResult.diseaseIdentification}</p>
-                          </div>
-                        </div>
-
-                        {/* Expandable Disease Details */}
-                        {parsedResult.diseaseDetails && parsedResult.diseaseDetails.description && (
-                          <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => setIsDetailsOpen(!isDetailsOpen)}
-                              className="w-full p-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors focus:outline-none"
-                            >
-                              <span className="font-semibold text-gray-800 text-sm">Know More about {parsedResult.diseaseIdentification}</span>
-                              <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform duration-300 ${isDetailsOpen ? "rotate-180" : ""}`} />
-                            </button>
-
-                            <div className={`grid transition-all duration-300 ease-in-out ${isDetailsOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
-                              <div className="overflow-hidden">
-                                <div className="p-4 space-y-4 border-t border-gray-100 bg-white">
-
-                                  {isFetchingWiki ? (
-                                    <div className="flex animate-pulse space-x-3 items-center justify-center p-6 bg-gray-50 rounded-lg border border-gray-100">
-                                      <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                                      <span className="text-sm font-medium text-gray-500">Searching Wikipedia for images...</span>
-                                    </div>
-                                  ) : wikiImageUrl ? (
-                                    <div className="w-full flex justify-center mb-2 px-4 py-2 bg-gray-50 rounded-lg border border-gray-100">
-                                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                                      <img src={wikiImageUrl} alt={parsedResult.diseaseIdentification} className="max-h-56 w-auto rounded-md shadow-sm border border-gray-200 object-contain" />
-                                    </div>
-                                  ) : (
-                                    <div className="w-full flex flex-col items-center justify-center p-6 bg-gray-50 rounded-lg border border-gray-100 mb-2">
-                                      <ImageIcon className="w-8 h-8 text-gray-300 mb-2 opacity-50" />
-                                      <p className="text-xs text-center text-gray-500 mb-3">No verified public image found on Wikipedia.</p>
-                                      <a
-                                        href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(parsedResult.diseaseIdentification)}`}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="text-xs text-blue-600 hover:underline font-semibold bg-blue-50 px-3 py-1.5 rounded-full"
-                                      >
-                                        View Images on Google
-                                      </a>
-                                    </div>
-                                  )}
-
-                                  <div>
-                                    <h4 className="font-bold text-gray-800 text-sm mb-1.5 flex items-center gap-2">
-                                      Description
-                                    </h4>
-                                    <p className="text-sm text-gray-600 leading-relaxed bg-gray-50 p-3 rounded-lg border border-gray-100">{parsedResult.diseaseDetails.description}</p>
-                                  </div>
-
-                                  {parsedResult.diseaseDetails.typicalSymptoms && parsedResult.diseaseDetails.typicalSymptoms.length > 0 && (
-                                    <div>
-                                      <h4 className="font-bold text-gray-800 text-sm mb-1.5">Typical Symptoms</h4>
-                                      <ul className="list-disc pl-5 space-y-1 bg-yellow-50/50 p-3 rounded-lg border border-yellow-100/50">
-                                        {parsedResult.diseaseDetails.typicalSymptoms.map((sym: string, idx: number) => (
-                                          <li key={idx} className="text-sm text-gray-600">{sym}</li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Medicines */}
-                        {parsedResult.prescription?.medicines?.length > 0 && (
-                          <div className="mt-2 text-sm">
-                            <h4 className="font-bold text-gray-800 mb-2 border-b border-gray-100 pb-2">Prescribed Medicines</h4>
-                            <div className="space-y-3">
-                              {parsedResult.prescription.medicines.map((med: { name: string; dosage: string; frequency: string; duration: string; unitPriceEstimate?: string; totalCostEstimate?: string; purchaseQuery?: string }, idx: number) => (
-                                <div key={idx} className="p-4 border border-blue-100 bg-blue-50/30 rounded-lg flex flex-col gap-2 relative">
-                                  <div className="flex justify-between items-start">
-                                    <p className="font-semibold text-blue-900 text-base">{med.name}</p>
-                                    {med.totalCostEstimate && (
-                                      <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded shadow-sm">
-                                        {med.totalCostEstimate}
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  <p className="text-xs text-gray-600">
-                                    <span className="font-medium text-gray-700">Dosage:</span> {med.dosage} &nbsp;|&nbsp;
-                                    <span className="font-medium text-gray-700"> Freq:</span> {med.frequency} &nbsp;|&nbsp;
-                                    <span className="font-medium text-gray-700"> Duration:</span> {med.duration}
-                                  </p>
-
-                                  {med.unitPriceEstimate && (
-                                    <p className="text-xs text-green-700 font-medium bg-green-50 w-fit px-2 py-1 rounded inline-block mt-0.5">
-                                      Unit Price: {med.unitPriceEstimate}
-                                    </p>
-                                  )}
-
-                                  {med.purchaseQuery && (
-                                    <div className="mt-1">
-                                      <a
-                                        href={`https://www.google.com/search?tbm=shop&q=${encodeURIComponent(med.purchaseQuery)}`}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="inline-flex items-center text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors px-3 py-1.5 rounded-full shadow-sm"
-                                      >
-                                        Buy Online
-                                      </a>
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-
-                            {/* Local Pharmacy and Online Buying */}
-                            <div className="mt-4 flex flex-col sm:flex-row gap-2">
-                              {isFetchingPharmacy ? (
-                                <div className="flex-1 flex items-center justify-center p-3 text-xs bg-gray-50 border border-gray-100 rounded-lg text-gray-500 animate-pulse">
-                                  <MapPin className="w-4 h-4 mr-2 text-gray-400" />
-                                  Looking for nearest veterinary pharmacy...
-                                </div>
-                              ) : nearestPharmacy ? (
-                                <div className="flex-1 flex flex-col justify-center p-3 text-xs bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-900 shadow-sm">
-                                  <div className="flex items-center gap-1 font-bold mb-1">
-                                    <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
-                                    Nearest Pharmacy Found
-                                  </div>
-                                  <span className="font-semibold text-emerald-800 leading-tight block">{nearestPharmacy.name}</span>
-                                  {nearestPharmacy.distanceKm && (
-                                    <span className="text-emerald-700 mt-1 block font-medium">{nearestPharmacy.distanceKm} km away</span>
-                                  )}
-                                </div>
-                              ) : null}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Care Steps */}
-                        {parsedResult.prescription?.careSteps?.length > 0 && (
-                          <div className="mt-4 text-sm pb-4">
-                            <h4 className="font-bold text-gray-800 mb-3 border-b border-gray-100 pb-2">Immediate Care Steps</h4>
-                            <ul className="pl-0 space-y-2">
-                              {parsedResult.prescription.careSteps.map((step: string, idx: number) => (
-                                <li key={idx} className="flex items-start gap-2">
-                                  <span className="bg-gray-100 text-gray-500 text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5 shrink-0">{idx + 1}</span>
-                                  <span className="text-gray-700">{step}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        <div className="mt-auto pt-4 border-t border-gray-100">
-                          <Button
-                            variant="outline"
-                            className="w-full border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
-                            onClick={() => {
-                              setIsCreatingNewCase(true);
-                              setFile(null);
-                              setPreviewUrl(null);
-                              setSymptoms("");
-                              setError(null);
-                              window.scrollTo({ top: 0, behavior: 'smooth' });
-                            }}
-                          >
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            Provide Follow-Up Media for this Diagnosis
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {result && !parsedResult && !loading && (
-                      <div className="flex flex-col h-full">
-                        <div className="p-5 bg-gray-50 rounded-lg border border-gray-100 flex-grow text-gray-800 text-sm leading-relaxed overflow-y-auto max-h-[400px] prose prose-sm max-w-none prose-blue mb-4">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {result}
-                          </ReactMarkdown>
-                        </div>
-
-                        <Button
-                          variant="outline"
-                          className="w-full border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
-                          onClick={() => {
-                            setIsCreatingNewCase(true);
-                            setFile(null);
-                            setPreviewUrl(null);
-                            setSymptoms("");
-                            setError(null);
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }}
-                        >
-                          <RefreshCw className="mr-2 h-4 w-4" />
-                          Provide Follow-Up Media for this Diagnosis
-                        </Button>
-                      </div>
-                    )}
-
-                  </CardContent>
-                </Card>
-              )}
+        {/* Main Action Buttons */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          {/* Take Photo */}
+          <button
+            className="relative bg-card border-2 border-primary rounded-2xl p-6 flex flex-col items-center justify-center gap-3 shadow-sm hover:shadow-md transition-all active:scale-95 min-h-[140px]"
+            onClick={() => setCaptureMode('photo')}
+          >
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              onChange={handleFileChange}
+            />
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+              <Camera className="w-10 h-10 text-primary" />
             </div>
-          );
+            <span className="text-lg font-semibold text-foreground text-center">{t.takePhoto}</span>
+          </button>
 
-          if (!activeCaseId && !isCreatingNewCase) {
-            return (
-              <CaseDashboard
-                cases={cases}
-                onStartNew={() => setIsCreatingNewCase(true)}
-                onViewCase={(id) => setActiveCaseId(id)}
-                onDeleteCase={handleDeleteCase}
-              />
-            );
-          } else if (activeCaseId) {
-            return (
-              <CaseTimeline
-                caseData={cases.find(c => c.caseId === activeCaseId)!}
-                onBack={() => { setActiveCaseId(null); setIsCreatingNewCase(false); }}
-                onFollowUp={!isCreatingNewCase ? () => {
-                  setIsCreatingNewCase(true);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                } : undefined}
-                uploadForm={isCreatingNewCase ? uploadFormContent : undefined}
-                onDeleteRecord={handleDeleteRecord}
-              />
-            );
-          } else {
-            return (
-              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full max-w-full">
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setIsCreatingNewCase(false);
-                    setFile(null);
-                    setPreviewUrl(null);
-                    setResult(null);
-                    setParsedResult(null);
-                  }}
-                  className="mb-2 text-gray-600 hover:bg-gray-100/50"
-                >
-                  <div className="flex items-center">
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to Dashboard
-                  </div>
-                </Button>
-                {uploadFormContent}
-              </div>
-            );
-          }
-        })()}
-      </div>
-    </main>
+          {/* Record Video */}
+          <button
+            className="relative bg-card border-2 border-accent rounded-2xl p-6 flex flex-col items-center justify-center gap-3 shadow-sm hover:shadow-md transition-all active:scale-95 min-h-[140px]"
+            onClick={() => setCaptureMode('video')}
+          >
+            <input
+              type="file"
+              accept="video/*"
+              capture="environment"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              onChange={handleFileChange}
+            />
+            <div className="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center">
+              <Video className="w-10 h-10 text-accent" />
+            </div>
+            <span className="text-lg font-semibold text-foreground text-center">{t.recordVideo}</span>
+          </button>
+        </div>
+
+        {/* Upload from Gallery */}
+        <button
+          className="relative w-full bg-secondary border-2 border-dashed border-border rounded-2xl p-5 flex items-center justify-center gap-4 mb-6 hover:bg-secondary/80 transition-colors active:scale-98"
+        >
+          <input
+            type="file"
+            accept="image/*, video/*"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            onChange={handleFileChange}
+          />
+          <Upload className="w-8 h-8 text-muted-foreground" />
+          <span className="text-base font-medium text-muted-foreground">{t.uploadMedia}</span>
+        </button>
+
+        {/* View History Button */}
+        <button
+          className="w-full bg-card border-2 border-border rounded-2xl p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-all active:scale-98 mb-4"
+          onClick={() => setCurrentScreen('history')}
+        >
+          <div className="w-14 h-14 bg-muted rounded-xl flex items-center justify-center">
+            <History className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <div className="flex-1 text-left">
+            <span className="text-lg font-semibold text-foreground block">{t.viewHistory}</span>
+            <span className="text-sm text-muted-foreground">
+              {cases.length > 0 ? `${cases.length} ${t.cases}` : t.noHistory}
+            </span>
+          </div>
+          <ChevronDown className="w-6 h-6 text-muted-foreground -rotate-90" />
+        </button>
+
+        {/* Quick Tips Card */}
+        <Card className="border-2 border-border bg-card/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Info className="w-5 h-5 text-primary" />
+              {language === 'hindi' ? 'उपयोग के टिप्स' : language === 'bengali' ? 'ব্যবহারের টিপস' : 'Quick Tips'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground space-y-2">
+            <p>{language === 'hindi' ? '1. जानवर की साफ फोटो लें' : language === 'bengali' ? '1. পশুর পরিষ্কার ছবি তুলুন' : '1. Take a clear photo of the animal'}</p>
+            <p>{language === 'hindi' ? '2. समस्या वाली जगह दिखाएं' : language === 'bengali' ? '2. সমস্যাযুক্ত স্থান দেখান' : '2. Show the affected area clearly'}</p>
+            <p>{language === 'hindi' ? '3. अच्छी रोशनी में फोटो लें' : language === 'bengali' ? '3. ভালো আলোতে ছবি তুলুন' : '3. Take photo in good lighting'}</p>
+          </CardContent>
+        </Card>
+      </main>
+
+      {/* Bottom Navigation */}
+      <nav className="bg-card border-t-2 border-border safe-area-bottom">
+        <div className="flex justify-around items-center py-3 max-w-lg mx-auto">
+          <button 
+            className="flex flex-col items-center gap-1 p-2 text-primary"
+            onClick={() => setCurrentScreen('home')}
+          >
+            <Home className="w-7 h-7" />
+            <span className="text-xs font-medium">{language === 'hindi' ? 'होम' : language === 'bengali' ? 'হোম' : 'Home'}</span>
+          </button>
+          <button 
+            className="flex flex-col items-center gap-1 p-2 text-muted-foreground"
+            onClick={() => setCurrentScreen('history')}
+          >
+            <Heart className="w-7 h-7" />
+            <span className="text-xs font-medium">{t.myCases}</span>
+          </button>
+          <button 
+            className="flex flex-col items-center gap-1 p-2 text-muted-foreground"
+            onClick={() => setCurrentScreen('settings')}
+          >
+            <Settings className="w-7 h-7" />
+            <span className="text-xs font-medium">{t.settings}</span>
+          </button>
+        </div>
+      </nav>
+    </div>
   );
+
+  // Capture/Upload Screen
+  const renderCaptureScreen = () => (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="bg-primary text-primary-foreground p-4 safe-area-top">
+        <div className="flex items-center gap-4 max-w-lg mx-auto">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-primary-foreground hover:bg-primary-foreground/20"
+            onClick={() => {
+              resetCapture();
+              setCurrentScreen('home');
+            }}
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </Button>
+          <h1 className="text-xl font-bold">{t.newDiagnosis}</h1>
+        </div>
+      </header>
+
+      <main className="flex-1 p-4 max-w-lg mx-auto w-full overflow-y-auto">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Media Preview */}
+          {previewUrl && (
+            <div className="relative rounded-2xl overflow-hidden bg-muted border-2 border-border">
+              {file?.type.startsWith('video/') ? (
+                <video
+                  src={previewUrl}
+                  controls
+                  className="w-full max-h-64 object-contain"
+                  ref={videoRef}
+                />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="w-full max-h-64 object-contain"
+                />
+              )}
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="absolute top-3 right-3"
+                onClick={() => {
+                  setFile(null);
+                  setPreviewUrl(null);
+                }}
+              >
+                <X className="w-4 h-4 mr-1" />
+                {language === 'hindi' ? 'हटाएं' : language === 'bengali' ? 'মুছুন' : 'Remove'}
+              </Button>
+            </div>
+          )}
+
+          {/* Animal Name */}
+          {!activeCaseId && (
+            <div className="space-y-2">
+              <Label className="text-base font-semibold">{t.animalName}</Label>
+              <input
+                type="text"
+                placeholder={t.animalNamePlaceholder}
+                value={animalName}
+                onChange={(e) => setAnimalName(e.target.value)}
+                className="w-full h-14 px-4 text-lg rounded-xl border-2 border-border bg-card focus:border-primary focus:outline-none transition-colors"
+              />
+            </div>
+          )}
+
+          {/* Symptoms */}
+          <div className="space-y-2">
+            <Label className="text-base font-semibold">{t.symptoms}</Label>
+            <Textarea
+              placeholder={t.symptomsPlaceholder}
+              value={symptoms}
+              onChange={(e) => setSymptoms(e.target.value)}
+              className="min-h-[100px] text-base rounded-xl border-2 border-border bg-card focus:border-primary resize-none"
+            />
+          </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="p-4 bg-destructive/10 border-2 border-destructive/30 rounded-xl flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-destructive shrink-0 mt-0.5" />
+              <p className="text-sm text-destructive font-medium">{error}</p>
+            </div>
+          )}
+
+          {/* Submit Button */}
+          <Button
+            type="submit"
+            className="w-full h-16 text-xl font-bold rounded-xl"
+            disabled={!file || loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-6 h-6 mr-3 animate-spin" />
+                {t.analyzing}
+              </>
+            ) : (
+              <>
+                <Stethoscope className="w-6 h-6 mr-3" />
+                {t.analyze}
+              </>
+            )}
+          </Button>
+        </form>
+      </main>
+    </div>
+  );
+
+  // Result Screen
+  const renderResultScreen = () => (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="bg-primary text-primary-foreground p-4 safe-area-top">
+        <div className="flex items-center justify-between max-w-lg mx-auto">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-primary-foreground hover:bg-primary-foreground/20"
+              onClick={() => {
+                stopSpeaking();
+                resetCapture();
+                setCurrentScreen('home');
+              }}
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </Button>
+            <h1 className="text-xl font-bold">{t.result}</h1>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-primary-foreground hover:bg-primary-foreground/20"
+            onClick={() => isSpeaking ? stopSpeaking() : parsedResult && speakResult(`${t.disease}: ${parsedResult.diseaseIdentification}. ${parsedResult.diseaseDetails?.description || ''}`)}
+          >
+            {isSpeaking ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+          </Button>
+        </div>
+      </header>
+
+      <main className="flex-1 p-4 max-w-lg mx-auto w-full overflow-y-auto pb-24">
+        {parsedResult ? (
+          <div className="space-y-4">
+            {/* Confidence Banner */}
+            {parsedResult.confidenceScore >= 60 && !parsedResult.recommendHumanVet ? (
+              <div className="p-4 bg-success/10 border-2 border-success/30 rounded-xl flex items-start gap-4">
+                <CheckCircle2 className="w-10 h-10 text-success shrink-0" />
+                <div>
+                  <p className="font-bold text-lg text-success">{t.confidence}: {parsedResult.confidenceScore}%</p>
+                  <p className="text-sm text-success/80">{language === 'hindi' ? 'घर पर इलाज कर सकते हैं' : language === 'bengali' ? 'বাড়িতে চিকিৎসা করা যায়' : 'Can be treated at home'}</p>
+                </div>
+              </div>
+            ) : parsedResult.confidenceScore >= 30 ? (
+              <div className="p-4 bg-warning/10 border-2 border-warning/30 rounded-xl flex items-start gap-4">
+                <AlertTriangle className="w-10 h-10 text-warning shrink-0" />
+                <div>
+                  <p className="font-bold text-lg text-warning">{t.warning}</p>
+                  <p className="text-sm text-warning/80">{language === 'hindi' ? 'डॉक्टर से मिलें' : language === 'bengali' ? 'ডাক্তার দেখান' : 'Please consult a vet'}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 bg-destructive/10 border-2 border-destructive/30 rounded-xl flex items-start gap-4">
+                <AlertCircle className="w-10 h-10 text-destructive shrink-0" />
+                <div>
+                  <p className="font-bold text-lg text-destructive">{t.emergency}</p>
+                  <p className="text-sm text-destructive/80">{language === 'hindi' ? 'तुरंत डॉक्टर को बुलाएं' : language === 'bengali' ? 'এখনই ডাক্তার ডাকুন' : 'Call vet immediately'}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Disease Name */}
+            <Card className="border-2 border-border">
+              <CardHeader className="pb-2">
+                <CardDescription className="text-base">{t.disease}</CardDescription>
+                <CardTitle className="text-2xl text-primary">{parsedResult.diseaseIdentification}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground leading-relaxed">{parsedResult.diseaseDetails?.description}</p>
+              </CardContent>
+            </Card>
+
+            {/* Medicines */}
+            {parsedResult.prescription?.medicines?.length > 0 && (
+              <Card className="border-2 border-primary/30 bg-primary/5">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Pill className="w-6 h-6 text-primary" />
+                    {t.medicines}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {parsedResult.prescription.medicines.map((med: { name: string; dosage: string; instructions: string }, idx: number) => (
+                    <div key={idx} className="bg-card p-4 rounded-xl border border-border">
+                      <p className="font-bold text-foreground text-lg">{med.name}</p>
+                      <p className="text-primary font-semibold">{med.dosage}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{med.instructions}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Care Steps */}
+            {parsedResult.prescription?.careSteps?.length > 0 && (
+              <Card className="border-2 border-accent/30 bg-accent/5">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Heart className="w-6 h-6 text-accent" />
+                    {t.careSteps}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {parsedResult.prescription.careSteps.map((step: string, idx: number) => (
+                    <div key={idx} className="flex items-start gap-4 bg-card p-4 rounded-xl border border-border">
+                      <div className="w-8 h-8 bg-accent text-accent-foreground rounded-full flex items-center justify-center font-bold shrink-0">
+                        {idx + 1}
+                      </div>
+                      <p className="text-foreground leading-relaxed">{step}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Emergency Contact */}
+            {parsedResult.recommendHumanVet && (
+              <a
+                href="tel:1800-180-1551"
+                className="flex items-center justify-center gap-3 w-full h-16 bg-destructive text-destructive-foreground rounded-xl font-bold text-lg"
+              >
+                <Phone className="w-6 h-6" />
+                {language === 'hindi' ? 'पशु हेल्पलाइन: 1800-180-1551' : language === 'bengali' ? 'পশু হেল্পলাইন: 1800-180-1551' : 'Animal Helpline: 1800-180-1551'}
+              </a>
+            )}
+          </div>
+        ) : result ? (
+          <div className="prose prose-sm max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {result}
+            </ReactMarkdown>
+          </div>
+        ) : null}
+      </main>
+
+      {/* Bottom Action */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t-2 border-border safe-area-bottom">
+        <div className="max-w-lg mx-auto flex gap-3">
+          <Button
+            variant="outline"
+            className="flex-1 h-14 text-base font-semibold"
+            onClick={() => {
+              stopSpeaking();
+              resetCapture();
+              setCurrentScreen('home');
+            }}
+          >
+            <Home className="w-5 h-5 mr-2" />
+            {language === 'hindi' ? 'होम' : language === 'bengali' ? 'হোম' : 'Home'}
+          </Button>
+          <Button
+            className="flex-1 h-14 text-base font-semibold"
+            onClick={() => {
+              stopSpeaking();
+              setFile(null);
+              setPreviewUrl(null);
+              setSymptoms("");
+              setResult(null);
+              setParsedResult(null);
+              setCurrentScreen('capture');
+            }}
+          >
+            <RefreshCw className="w-5 h-5 mr-2" />
+            {t.newDiagnosis}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // History Screen
+  const renderHistoryScreen = () => (
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="bg-primary text-primary-foreground p-4 safe-area-top">
+        <div className="flex items-center gap-4 max-w-lg mx-auto">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-primary-foreground hover:bg-primary-foreground/20"
+            onClick={() => setCurrentScreen('home')}
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </Button>
+          <h1 className="text-xl font-bold">{t.myCases}</h1>
+        </div>
+      </header>
+
+      <main className="flex-1 p-4 max-w-lg mx-auto w-full overflow-y-auto">
+        <AccessibleCaseDashboard
+          cases={cases}
+          language={language}
+          translations={t}
+          onStartNew={() => {
+            resetCapture();
+            setCurrentScreen('home');
+          }}
+          onViewCase={(caseId) => {
+            setActiveCaseId(caseId);
+            setCurrentScreen('timeline');
+          }}
+          onDeleteCase={handleDeleteCase}
+        />
+      </main>
+    </div>
+  );
+
+  // Timeline Screen
+  const renderTimelineScreen = () => {
+    const activeCase = cases.find(c => c.caseId === activeCaseId);
+    if (!activeCase) return null;
+
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="bg-primary text-primary-foreground p-4 safe-area-top">
+          <div className="flex items-center gap-4 max-w-lg mx-auto">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-primary-foreground hover:bg-primary-foreground/20"
+              onClick={() => {
+                setActiveCaseId(null);
+                setCurrentScreen('history');
+              }}
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-xl font-bold">{activeCase.animalName !== "Unknown" ? activeCase.animalName : language === 'hindi' ? 'अनाम जानवर' : language === 'bengali' ? 'নামহীন পশু' : 'Unnamed Animal'}</h1>
+              <p className="text-sm opacity-90">{activeCase.records.length} {t.visit}</p>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 p-4 max-w-lg mx-auto w-full overflow-y-auto pb-24">
+          <AccessibleCaseTimeline
+            caseData={activeCase}
+            language={language}
+            translations={t}
+            onDeleteRecord={handleDeleteRecord}
+          />
+        </main>
+
+        {/* Bottom Action */}
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t-2 border-border safe-area-bottom">
+          <div className="max-w-lg mx-auto">
+            <Button
+              className="w-full h-14 text-base font-semibold"
+              onClick={() => {
+                resetCapture();
+                setAnimalName(activeCase.animalName !== "Unknown" ? activeCase.animalName : "");
+                setCurrentScreen('capture');
+              }}
+            >
+              <Camera className="w-5 h-5 mr-2" />
+              {t.followUp}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Settings Screen
+  const renderSettingsScreen = () => (
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="bg-primary text-primary-foreground p-4 safe-area-top">
+        <div className="flex items-center gap-4 max-w-lg mx-auto">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-primary-foreground hover:bg-primary-foreground/20"
+            onClick={() => setCurrentScreen('home')}
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </Button>
+          <h1 className="text-xl font-bold">{t.settings}</h1>
+        </div>
+      </header>
+
+      <main className="flex-1 p-4 max-w-lg mx-auto w-full">
+        <div className="space-y-4">
+          {/* Language Selection */}
+          <Card className="border-2 border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Languages className="w-5 h-5 text-primary" />
+                {t.language}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select value={language} onValueChange={(v) => handleLanguageChange(v as Language)}>
+                <SelectTrigger className="w-full h-14 text-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hindi" className="text-lg py-3">हिंदी (Hindi)</SelectItem>
+                  <SelectItem value="english" className="text-lg py-3">English</SelectItem>
+                  <SelectItem value="bengali" className="text-lg py-3">বাংলা (Bengali)</SelectItem>
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+
+          {/* Device ID */}
+          <Card className="border-2 border-border">
+            <CardHeader>
+              <CardTitle className="text-base">{language === 'hindi' ? 'डिवाइस ID' : language === 'bengali' ? 'ডিভাইস ID' : 'Device ID'}</CardTitle>
+              <CardDescription>{language === 'hindi' ? 'दूसरे डिवाइस पर डेटा सिंक करने के लिए' : language === 'bengali' ? 'অন্য ডিভাইসে ডেটা সিঙ্ক করতে' : 'To sync data on another device'}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={userId}
+                  readOnly
+                  className="flex-1 h-12 px-3 text-sm font-mono bg-muted rounded-lg border border-border"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-12 w-12"
+                  onClick={() => navigator.clipboard.writeText(userId)}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Usage Stats */}
+          <Card className="border-2 border-border">
+            <CardHeader>
+              <CardTitle className="text-base">{language === 'hindi' ? 'उपयोग आँकड़े' : language === 'bengali' ? 'ব্যবহারের পরিসংখ্যান' : 'Usage Stats'}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-primary/10 p-4 rounded-xl text-center">
+                  <p className="text-3xl font-bold text-primary">{usageLogs.length}</p>
+                  <p className="text-sm text-muted-foreground">{language === 'hindi' ? 'कुल जाँच' : language === 'bengali' ? 'মোট পরীক্ষা' : 'Total Scans'}</p>
+                </div>
+                <div className="bg-accent/20 p-4 rounded-xl text-center">
+                  <p className="text-3xl font-bold text-accent">{cases.length}</p>
+                  <p className="text-sm text-muted-foreground">{language === 'hindi' ? 'जानवर' : language === 'bengali' ? 'পশু' : 'Animals'}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Help Contact */}
+          <a
+            href="tel:1800-180-1551"
+            className="flex items-center gap-4 p-5 bg-card border-2 border-border rounded-xl"
+          >
+            <div className="w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center">
+              <Phone className="w-6 h-6 text-destructive" />
+            </div>
+            <div>
+              <p className="font-bold text-foreground">{language === 'hindi' ? 'पशु हेल्पलाइन' : language === 'bengali' ? 'পশু হেল্পলাইন' : 'Animal Helpline'}</p>
+              <p className="text-primary font-semibold">1800-180-1551</p>
+            </div>
+          </a>
+        </div>
+      </main>
+    </div>
+  );
+
+  // Render current screen
+  switch (currentScreen) {
+    case 'capture':
+      return renderCaptureScreen();
+    case 'result':
+      return renderResultScreen();
+    case 'history':
+      return renderHistoryScreen();
+    case 'timeline':
+      return renderTimelineScreen();
+    case 'settings':
+      return renderSettingsScreen();
+    default:
+      return renderHomeScreen();
+  }
 }
