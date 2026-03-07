@@ -1,64 +1,46 @@
 # Pashu-Krishi Rakshak (পশু-কৃষি রক্ষক / पशु-कृषि रक्षक)
 
-An AI-powered web application that acts as an expert field veterinary doctor and agricultural advisor. Built with Next.js and powered by AWS Bedrock's state-of-the-art Amazon Nova Pro vision model.
+An AI-powered web application that acts as an expert field veterinary doctor and agricultural advisor for rural farmers in India.
 
-## Features
+## Documentation
 
-- **Instant Visual Diagnosis**: Upload photos of animals or crops to receive immediate, professional-grade diagnoses.
-- **Multilingual Support**: Get diagnosis and treatment plans in English, Hindi (हिंदी), or Bengali (বাংলা).
-- **Practical Treatments**: Built to provide highly confident, actionable solutions for farmers in the field without generic advice.
-- **Modern UI**: Clean, responsive interface built with shadcn/ui and Tailwind CSS.
-- **Rich Formatting**: Beautiful markdown formatting for prescriptions.
-- **Secure**: Direct, secure server-side integration with AWS Bedrock.
+All project documentation has been moved to the `docs/` folder:
 
-## Tech Stack
+- **[Getting Started Guide](docs/README.md)** - Installation and usage instructions
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - How to deploy to AWS Amplify
+- **[Requirements Document](docs/requirements.md)** - Detailed requirements specification
+- **[Design Document](docs/design.md)** - System architecture and design
+- **[Logout Implementation](docs/LOGOUT_IMPLEMENTATION.md)** - Authentication feature details
+- **[Device ID Removal](docs/DEVICE_ID_REMOVAL.md)** - UI simplification changes
 
-- **Framework:** Next.js 15 (App Router)
-- **Frontend Toolkit:** React 19, Tailwind CSS v4, shadcn/ui, Radix UI
-- **AI Integrations:** AWS Bedrock Runtime (`@aws-sdk/client-bedrock-runtime`)
-- **Foundation Model:** Amazon Nova Pro (`amazon.nova-pro-v1:0` via `us-east-1` cross-region inference)
-- **Markdown Handling:** `react-markdown`, `remark-gfm`, `@tailwindcss/typography`
-
-## Getting Started
-
-### Prerequisites
-
-You must have Node.js installed on your machine and access to an AWS Account with Bedrock permissions.
-
-1. **IAM Permissions**: Your AWS user must have `AmazonBedrockFullAccess` or equivalent permissions to invoke models.
-2. **Model Access**: You must explicitly request access to the **Amazon Nova Pro** model within the AWS Bedrock Console.
-
-### 1. Installation
-
-Clone the repository and install dependencies:
+## Quick Start
 
 ```bash
+# Install dependencies
 npm install
-```
 
-### 2. Environment Variables
+# Set up environment variables (see docs/README.md)
+cp .env.example .env.local
 
-Create a `.env.local` file in the root of the project:
-
-```env
-AWS_ACCESS_KEY_ID=your_access_key_here
-AWS_SECRET_ACCESS_KEY=your_secret_key_here
-AWS_REGION=us-east-1
-```
-> **Note**: Amazon Nova Pro requires `us-east-1` (or equivalent region where the model is hosted) for cross-region inference.
-
-### 3. Run the Development Server
-
-Start the application:
-
-```bash
+# Run development server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to use the application.
+## Features
 
-## Usage
+- 🐄 Instant visual diagnosis for livestock and crops
+- 🌍 Multilingual support (English, Hindi, Bengali)
+- 📱 Mobile-first responsive design
+- 🔐 Secure AWS Cognito authentication
+- ☁️ Powered by AWS Bedrock Nova Pro AI model
 
-1. Select a language from the dropdown menu (English, Hindi, Bengali).
-2. Drag and drop or click to upload a clear picture of the agricultural issue.
-3. Click **Get Veterinary Diagnosis** and the AI will analyze the image and generate a response.
+## Tech Stack
+
+- Next.js 15 + React 19
+- AWS Amplify + Cognito
+- AWS Bedrock (Nova Pro)
+- Tailwind CSS + shadcn/ui
+
+## License
+
+See LICENSE file for details.

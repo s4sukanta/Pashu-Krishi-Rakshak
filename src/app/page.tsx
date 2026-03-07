@@ -24,7 +24,9 @@ import {
   RefreshCw,
   Trash2,
   Info,
-  Languages
+  Languages,
+  LogOut,
+  User
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +38,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { AccessibleCaseDashboard } from "@/components/AccessibleCaseDashboard";
 import { AccessibleCaseTimeline } from "@/components/AccessibleCaseTimeline";
+import { useAuth } from "@/components/AuthProvider";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Language translations
 const translations = {
@@ -76,6 +80,13 @@ const translations = {
     visit: "Visit",
     myCases: "My Animals",
     selectLanguage: "Select Language",
+    logout: "Logout",
+    logoutConfirm: "Are you sure you want to logout?",
+    loggedInAs: "Logged in as",
+    confirmLogout: "Confirm Logout",
+    cancel: "Cancel",
+    account: "Account",
+    logoutWarning: "You will need to login again to access your data.",
   },
   hindi: {
     appName: "पशु कृषि रक्षक",
@@ -114,6 +125,13 @@ const translations = {
     visit: "मुलाकात",
     myCases: "मेरे जानवर",
     selectLanguage: "भाषा चुनें",
+    logout: "लॉग आउट",
+    logoutConfirm: "क्या आप लॉग आउट करना चाहते हैं?",
+    loggedInAs: "लॉग इन है",
+    confirmLogout: "लॉग आउट की पुष्टि करें",
+    cancel: "रद्द करें",
+    account: "खाता",
+    logoutWarning: "आपको अपने डेटा तक पहुंचने के लिए फिर से लॉगिन करना होगा।",
   },
   bengali: {
     appName: "পশু কৃষি রক্ষক",
@@ -152,6 +170,13 @@ const translations = {
     visit: "দেখা",
     myCases: "আমার পশু",
     selectLanguage: "ভাষা নির্বাচন করুন",
+    logout: "লগ আউট",
+    logoutConfirm: "আপনি কি লগ আউট করতে চান?",
+    loggedInAs: "লগ ইন আছেন",
+    confirmLogout: "লগ আউট নিশ্চিত করুন",
+    cancel: "বাতিল করুন",
+    account: "অ্যাকাউন্ট",
+    logoutWarning: "আপনার ডেটা অ্যাক্সেস করতে আপনাকে আবার লগইন করতে হবে।",
   },
 };
 
@@ -218,6 +243,9 @@ export default function PashuKrishiRakshak() {
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [captureMode, setCaptureMode] = useState<'photo' | 'video' | 'upload'>('photo');
   const [showOptionalDetails, setShowOptionalDetails] = useState<boolean>(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState<boolean>(false);
+
+  const { signOut, user } = useAuth();
 
   const t = translations[language];
 
@@ -1448,32 +1476,6 @@ export default function PashuKrishiRakshak() {
             </CardContent>
           </Card>
 
-          {/* Device ID */}
-          <Card className="border-2 border-border">
-            <CardHeader>
-              <CardTitle className="text-base">{language === 'hindi' ? 'डिवाइस ID' : language === 'bengali' ? 'ডিভাইস ID' : 'Device ID'}</CardTitle>
-              <CardDescription>{language === 'hindi' ? 'दूसरे डिवाइस पर डेटा सिंक करने के लिए' : language === 'bengali' ? 'অন্য ডিভাইসে ডেটা সিঙ্ক করতে' : 'To sync data on another device'}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={userId}
-                  readOnly
-                  className="flex-1 h-12 px-3 text-sm font-mono bg-muted rounded-lg border border-border"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-12 w-12"
-                  onClick={() => navigator.clipboard.writeText(userId)}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Usage Stats */}
           <Card className="border-2 border-border">
             <CardHeader>
@@ -1506,24 +1508,120 @@ export default function PashuKrishiRakshak() {
               <p className="text-primary font-semibold">1800-180-1551</p>
             </div>
           </a>
+
+          {/* Account Info */}
+          <Card className="border-2 border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <User className="w-5 h-5 text-primary" />
+                {t.account}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                  <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
+                    <User className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground">{t.loggedInAs}</p>
+                    <p className="text-sm font-semibold text-foreground truncate">
+                      {user?.signInDetails?.loginId || user?.username || userId}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Logout Button */}
+          <Button
+            variant="destructive"
+            className="w-full h-16 text-lg font-bold"
+            onClick={() => setShowLogoutDialog(true)}
+          >
+            <LogOut className="w-6 h-6 mr-3" />
+            {t.logout}
+          </Button>
         </div>
       </main>
     </div>
   );
 
+  const handleLogout = () => {
+    if (signOut) {
+      signOut();
+      // Clear local state
+      setHistory([]);
+      setCases([]);
+      setUsageLogs([]);
+      setActiveCaseId(null);
+      setFile(null);
+      setPreviewUrl(null);
+      setResult(null);
+      setParsedResult(null);
+      setShowLogoutDialog(false);
+    }
+  };
+
   // Render current screen
-  switch (currentScreen) {
-    case 'capture':
-      return renderCaptureScreen();
-    case 'result':
-      return renderResultScreen();
-    case 'history':
-      return renderHistoryScreen();
-    case 'timeline':
-      return renderTimelineScreen();
-    case 'settings':
-      return renderSettingsScreen();
-    default:
-      return renderHomeScreen();
-  }
+  return (
+    <>
+      {/* Logout Confirmation Dialog */}
+      <Dialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-xl">
+              <div className="w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center">
+                <LogOut className="w-6 h-6 text-destructive" />
+              </div>
+              {t.confirmLogout}
+            </DialogTitle>
+            <DialogDescription className="text-base pt-4">
+              {t.logoutConfirm}
+              <br />
+              <span className="text-muted-foreground text-sm mt-2 block">
+                {t.logoutWarning}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-3">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto h-12 text-base"
+              onClick={() => setShowLogoutDialog(false)}
+            >
+              {t.cancel}
+            </Button>
+            <Button
+              variant="destructive"
+              className="w-full sm:w-auto h-12 text-base font-semibold"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-5 h-5 mr-2" />
+              {t.logout}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Render Screen */}
+      {(() => {
+        switch (currentScreen) {
+          case 'capture':
+            return renderCaptureScreen();
+          case 'result':
+            return renderResultScreen();
+          case 'history':
+            return renderHistoryScreen();
+          case 'timeline':
+            return renderTimelineScreen();
+          case 'settings':
+            return renderSettingsScreen();
+          default:
+            return renderHomeScreen();
+        }
+      })()}
+    </>
+  );
 }
