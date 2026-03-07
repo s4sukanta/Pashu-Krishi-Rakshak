@@ -1619,6 +1619,8 @@ export default function PashuKrishiRakshak() {
       setResult(null);
       setParsedResult(null);
       setShowLogoutDialog(false);
+      // Redirect to landing page
+      router.push('/landing');
     }
   };
 

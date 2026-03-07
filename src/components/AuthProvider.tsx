@@ -47,7 +47,7 @@ export default function AuthProvider({ children, requireAuth = false }: AuthProv
                 setIsAuthenticated(true);
             } catch {
                 setIsAuthenticated(false);
-                router.push('/login');
+                router.push('/landing');
             } finally {
                 setChecking(false);
             }
