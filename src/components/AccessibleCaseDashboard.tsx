@@ -10,7 +10,7 @@ import {
   Trash2,
   Stethoscope
 } from "lucide-react";
-import { Case } from "@/app/page";
+import { Case } from "@/app/app/page";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 

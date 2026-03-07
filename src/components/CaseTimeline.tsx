@@ -1,7 +1,7 @@
 "use client";
 
 import { Activity, AlertCircle, AlertTriangle, ArrowLeft, CheckCircle2, ChevronDown, RefreshCw, MapPin, ImageIcon, Trash2 } from "lucide-react";
-import { Case, DiagnosisRecord } from "@/app/page";
+import { Case, DiagnosisRecord } from "@/app/app/page";
 import { useState } from "react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';

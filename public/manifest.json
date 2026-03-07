@@ -1,0 +1,21 @@
+{
+    "name": "Pashu-Krishi Rakshak",
+    "short_name": "Rakshak",
+    "description": "An AI-powered web application that acts as an expert field veterinary doctor and agricultural advisor for rural farmers in India.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#0ea5e9",
+    "icons": [
+        {
+            "src": "/globe.svg",
+            "sizes": "192x192",
+            "type": "image/svg+xml"
+        },
+        {
+            "src": "/globe.svg",
+            "sizes": "512x512",
+            "type": "image/svg+xml"
+        }
+    ]
+}
