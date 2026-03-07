@@ -1,16 +1,16 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { 
-  Camera, 
-  Video, 
-  History, 
-  Settings, 
-  ArrowLeft, 
-  Upload, 
-  Loader2, 
-  AlertTriangle, 
-  CheckCircle2, 
+import {
+  Camera,
+  Video,
+  History,
+  Settings,
+  ArrowLeft,
+  Upload,
+  Loader2,
+  AlertTriangle,
+  CheckCircle2,
   AlertCircle,
   Phone,
   Heart,
@@ -256,9 +256,22 @@ export default function PashuKrishiRakshak() {
     setCases(Array.from(caseMap.values()).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
   };
 
-  const fetchRemoteData = async (uid: string) => {
+  const fetchRemoteData = async () => {
     try {
-      const res = await fetch(`/api/history?userId=${uid}`);
+      const { fetchAuthSession } = await import('aws-amplify/auth');
+      const session = await fetchAuthSession();
+      const uid = session.userSub;
+      const token = session.tokens?.accessToken?.toString() || '';
+
+      if (!uid) return;
+      setUserId(uid);
+
+      const API_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, "");
+      const res = await fetch(`${API_URL}/history?userId=${uid}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setHistory(data.history || []);
@@ -271,13 +284,7 @@ export default function PashuKrishiRakshak() {
   };
 
   useEffect(() => {
-    let currentUserId = localStorage.getItem("pashu_krishi_user_id");
-    if (!currentUserId) {
-      currentUserId = generateUUID();
-      localStorage.setItem("pashu_krishi_user_id", currentUserId);
-    }
-    setUserId(currentUserId);
-    fetchRemoteData(currentUserId);
+    fetchRemoteData();
 
     // Load saved language preference
     const savedLang = localStorage.getItem("pashu_krishi_language") as Language;
@@ -313,9 +320,17 @@ export default function PashuKrishiRakshak() {
     }
 
     try {
-      await fetch('/api/history', {
+      const { fetchAuthSession } = await import('aws-amplify/auth');
+      const session = await fetchAuthSession();
+      const token = session.tokens?.accessToken?.toString() || '';
+      const API_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, "");
+
+      await fetch(`${API_URL}/history`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ userId, caseId: caseIdToDelete })
       });
     } catch (e) {
@@ -337,9 +352,17 @@ export default function PashuKrishiRakshak() {
     }
 
     try {
-      await fetch('/api/history', {
+      const { fetchAuthSession } = await import('aws-amplify/auth');
+      const session = await fetchAuthSession();
+      const token = session.tokens?.accessToken?.toString() || '';
+      const API_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, "");
+
+      await fetch(`${API_URL}/history`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ userId, timestamp: timestampToDelete })
       });
     } catch (e) {
@@ -528,8 +551,16 @@ export default function PashuKrishiRakshak() {
     }
 
     try {
-      const response = await fetch("/api/analyze", {
+      const { fetchAuthSession } = await import('aws-amplify/auth');
+      const session = await fetchAuthSession();
+      const token = session.tokens?.accessToken?.toString() || '';
+      const API_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, "");
+
+      const response = await fetch(`${API_URL}/analyze`, {
         method: "POST",
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData,
       });
 
@@ -543,7 +574,7 @@ export default function PashuKrishiRakshak() {
       try {
         const parsed = JSON.parse(data.result);
         setParsedResult(parsed);
-        
+
         // Auto-speak the diagnosis
         if (parsed.diseaseIdentification) {
           const speakText = `${t.disease}: ${parsed.diseaseIdentification}. ${parsed.diseaseDetails?.description || ''}`;
@@ -608,9 +639,9 @@ export default function PashuKrishiRakshak() {
               <p className="text-sm opacity-90">{t.tagline}</p>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className="text-primary-foreground hover:bg-primary-foreground/20"
             onClick={() => setCurrentScreen('settings')}
           >
@@ -727,21 +758,21 @@ export default function PashuKrishiRakshak() {
       {/* Bottom Navigation */}
       <nav className="bg-card border-t-2 border-border safe-area-bottom">
         <div className="flex justify-around items-center py-3 max-w-lg mx-auto">
-          <button 
+          <button
             className="flex flex-col items-center gap-1 p-2 text-primary"
             onClick={() => setCurrentScreen('home')}
           >
             <HomeIcon className="w-7 h-7" />
             <span className="text-xs font-medium">{language === 'hindi' ? 'होम' : language === 'bengali' ? 'হোম' : 'Home'}</span>
           </button>
-          <button 
+          <button
             className="flex flex-col items-center gap-1 p-2 text-muted-foreground"
             onClick={() => setCurrentScreen('history')}
           >
             <Heart className="w-7 h-7" />
             <span className="text-xs font-medium">{t.myCases}</span>
           </button>
-          <button 
+          <button
             className="flex flex-col items-center gap-1 p-2 text-muted-foreground"
             onClick={() => setCurrentScreen('settings')}
           >
@@ -762,357 +793,355 @@ export default function PashuKrishiRakshak() {
   // Capture/Upload Screen - Streamlined for quick media upload
   const renderCaptureScreen = () => {
     const activeCaseData = getActiveCaseData();
-    
-    return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="bg-primary text-primary-foreground p-4 safe-area-top">
-        <div className="flex items-center gap-4 max-w-lg mx-auto">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="text-primary-foreground hover:bg-primary-foreground/20"
-            onClick={() => {
-              resetCapture();
-              setShowOptionalDetails(false);
-              setCurrentScreen('home');
-            }}
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </Button>
-          <h1 className="text-xl font-bold">
-            {activeCaseId 
-              ? (language === 'hindi' ? 'प्रगति जाँचें' : language === 'bengali' ? 'অগ্রগতি দেখুন' : 'Check Progress')
-              : t.newDiagnosis
-            }
-          </h1>
-        </div>
-      </header>
 
-      <main className="flex-1 p-4 max-w-lg mx-auto w-full overflow-y-auto">
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Animal Selection Card - Show which animal this is for */}
-          {activeCaseId && activeCaseData ? (
-            // Follow-up for existing animal - show linked animal card
-            <div className="p-4 bg-primary/10 border-2 border-primary rounded-xl">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
-                  <RefreshCw className="w-6 h-6 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-primary font-medium">
-                    {language === 'hindi' ? 'फॉलो-अप जाँच' : language === 'bengali' ? 'ফলো-আপ পরীক্ষা' : 'Follow-up Diagnosis'}
-                  </p>
-                  <p className="text-lg font-bold text-foreground">
-                    {activeCaseData.animalName !== "Unknown" 
-                      ? activeCaseData.animalName 
-                      : (language === 'hindi' ? 'अनाम जानवर' : language === 'bengali' ? 'নামহীন পশু' : 'Unnamed Animal')}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {language === 'hindi' 
-                      ? `${activeCaseData.records.length} पिछली जाँच${activeCaseData.records.length > 1 ? 'ें' : ''}`
-                      : language === 'bengali' 
-                        ? `${activeCaseData.records.length}টি পূর্ববর্তী পরীক্ষা`
-                        : `${activeCaseData.records.length} previous visit${activeCaseData.records.length > 1 ? 's' : ''}`}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground"
-                  onClick={() => {
-                    setActiveCaseId(null);
-                    setAnimalName("");
-                  }}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          ) : cases.length > 0 ? (
-            // New diagnosis - show option to select existing animal or add new
-            <div className="space-y-3">
-              <Label className="text-base font-semibold flex items-center gap-2">
-                <Heart className="w-5 h-5 text-primary" />
-                {language === 'hindi' ? 'यह जाँच किसके लिए है?' : language === 'bengali' ? 'এই পরীক্ষা কার জন্য?' : 'Who is this diagnosis for?'}
-              </Label>
-              
-              {/* Existing Animals */}
-              <div className="grid gap-2">
-                {cases.slice(0, 3).map((caseItem) => (
-                  <button
-                    key={caseItem.caseId}
-                    type="button"
-                    className={`w-full p-3 rounded-xl border-2 flex items-center gap-3 transition-all ${
-                      activeCaseId === caseItem.caseId 
-                        ? 'border-primary bg-primary/10' 
-                        : 'border-border bg-card hover:border-primary/50'
-                    }`}
-                    onClick={() => {
-                      setActiveCaseId(caseItem.caseId);
-                      setAnimalName(caseItem.animalName !== "Unknown" ? caseItem.animalName : "");
-                    }}
-                  >
-                    {caseItem.records[0]?.thumbnailBase64 ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img 
-                        src={caseItem.records[0].thumbnailBase64} 
-                        alt="" 
-                        className="w-10 h-10 rounded-lg object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
-                        <Heart className="w-5 h-5 text-muted-foreground" />
-                      </div>
-                    )}
-                    <div className="flex-1 text-left">
-                      <p className="font-semibold text-foreground">
-                        {caseItem.animalName !== "Unknown" 
-                          ? caseItem.animalName 
-                          : (language === 'hindi' ? 'अनाम जानवर' : language === 'bengali' ? 'নামহীন পশু' : 'Unnamed Animal')}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {caseItem.records.length} {language === 'hindi' ? 'जाँच' : language === 'bengali' ? 'পরীক্ষা' : 'visit(s)'}
-                      </p>
-                    </div>
-                    {activeCaseId === caseItem.caseId && (
-                      <CheckCircle2 className="w-5 h-5 text-primary" />
-                    )}
-                  </button>
-                ))}
-                
-                {/* New Animal Option */}
-                <button
-                  type="button"
-                  className={`w-full p-3 rounded-xl border-2 border-dashed flex items-center gap-3 transition-all ${
-                    !activeCaseId 
-                      ? 'border-accent bg-accent/10' 
-                      : 'border-border bg-card hover:border-accent/50'
-                  }`}
-                  onClick={() => {
-                    setActiveCaseId(null);
-                    setAnimalName("");
-                  }}
-                >
-                  <div className="w-10 h-10 bg-accent/20 rounded-lg flex items-center justify-center">
-                    <span className="text-xl font-bold text-accent">+</span>
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        {/* Header */}
+        <header className="bg-primary text-primary-foreground p-4 safe-area-top">
+          <div className="flex items-center gap-4 max-w-lg mx-auto">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-primary-foreground hover:bg-primary-foreground/20"
+              onClick={() => {
+                resetCapture();
+                setShowOptionalDetails(false);
+                setCurrentScreen('home');
+              }}
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </Button>
+            <h1 className="text-xl font-bold">
+              {activeCaseId
+                ? (language === 'hindi' ? 'प्रगति जाँचें' : language === 'bengali' ? 'অগ্রগতি দেখুন' : 'Check Progress')
+                : t.newDiagnosis
+              }
+            </h1>
+          </div>
+        </header>
+
+        <main className="flex-1 p-4 max-w-lg mx-auto w-full overflow-y-auto">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Animal Selection Card - Show which animal this is for */}
+            {activeCaseId && activeCaseData ? (
+              // Follow-up for existing animal - show linked animal card
+              <div className="p-4 bg-primary/10 border-2 border-primary rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
+                    <RefreshCw className="w-6 h-6 text-primary" />
                   </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-semibold text-foreground">
-                      {language === 'hindi' ? 'नया जानवर जोड़ें' : language === 'bengali' ? 'নতুন পশু যোগ করুন' : 'Add New Animal'}
+                  <div className="flex-1">
+                    <p className="text-sm text-primary font-medium">
+                      {language === 'hindi' ? 'फॉलो-अप जाँच' : language === 'bengali' ? 'ফলো-আপ পরীক্ষা' : 'Follow-up Diagnosis'}
+                    </p>
+                    <p className="text-lg font-bold text-foreground">
+                      {activeCaseData.animalName !== "Unknown"
+                        ? activeCaseData.animalName
+                        : (language === 'hindi' ? 'अनाम जानवर' : language === 'bengali' ? 'নামহীন পশু' : 'Unnamed Animal')}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {language === 'hindi' ? 'पहली बार जाँच' : language === 'bengali' ? 'প্রথম পরীক্ষা' : 'First-time diagnosis'}
+                      {language === 'hindi'
+                        ? `${activeCaseData.records.length} पिछली जाँच${activeCaseData.records.length > 1 ? 'ें' : ''}`
+                        : language === 'bengali'
+                          ? `${activeCaseData.records.length}টি পূর্ববর্তী পরীক্ষা`
+                          : `${activeCaseData.records.length} previous visit${activeCaseData.records.length > 1 ? 's' : ''}`}
                     </p>
                   </div>
-                  {!activeCaseId && (
-                    <CheckCircle2 className="w-5 h-5 text-accent" />
-                  )}
-                </button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground"
+                    onClick={() => {
+                      setActiveCaseId(null);
+                      setAnimalName("");
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          ) : null}
+            ) : cases.length > 0 ? (
+              // New diagnosis - show option to select existing animal or add new
+              <div className="space-y-3">
+                <Label className="text-base font-semibold flex items-center gap-2">
+                  <Heart className="w-5 h-5 text-primary" />
+                  {language === 'hindi' ? 'यह जाँच किसके लिए है?' : language === 'bengali' ? 'এই পরীক্ষা কার জন্য?' : 'Who is this diagnosis for?'}
+                </Label>
 
-          {/* Media Preview - Primary Focus */}
-          {previewUrl && (
-            <div className="relative rounded-2xl overflow-hidden bg-muted border-4 border-primary shadow-lg">
-              {file?.type.startsWith('video/') ? (
-                <video
-                  src={previewUrl}
-                  controls
-                  className="w-full max-h-72 object-contain"
-                  ref={videoRef}
-                />
-              ) : (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  className="w-full max-h-72 object-contain"
-                />
-              )}
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                className="absolute top-3 right-3 h-10 px-3"
-                onClick={() => {
-                  setFile(null);
-                  setPreviewUrl(null);
-                }}
-              >
-                <X className="w-5 h-5 mr-1" />
-                {language === 'hindi' ? 'हटाएं' : language === 'bengali' ? 'মুছুন' : 'Remove'}
-              </Button>
-              {/* Success indicator */}
-              <div className="absolute bottom-3 left-3 bg-success text-success-foreground px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" />
-                {language === 'hindi' ? 'फोटो/वीडियो तैयार' : language === 'bengali' ? 'ছবি/ভিডিও প্রস্তুত' : 'Media ready'}
+                {/* Existing Animals */}
+                <div className="grid gap-2">
+                  {cases.slice(0, 3).map((caseItem) => (
+                    <button
+                      key={caseItem.caseId}
+                      type="button"
+                      className={`w-full p-3 rounded-xl border-2 flex items-center gap-3 transition-all ${activeCaseId === caseItem.caseId
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border bg-card hover:border-primary/50'
+                        }`}
+                      onClick={() => {
+                        setActiveCaseId(caseItem.caseId);
+                        setAnimalName(caseItem.animalName !== "Unknown" ? caseItem.animalName : "");
+                      }}
+                    >
+                      {caseItem.records[0]?.thumbnailBase64 ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={caseItem.records[0].thumbnailBase64}
+                          alt=""
+                          className="w-10 h-10 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                          <Heart className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="flex-1 text-left">
+                        <p className="font-semibold text-foreground">
+                          {caseItem.animalName !== "Unknown"
+                            ? caseItem.animalName
+                            : (language === 'hindi' ? 'अनाम जानवर' : language === 'bengali' ? 'নামহীন পশু' : 'Unnamed Animal')}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {caseItem.records.length} {language === 'hindi' ? 'जाँच' : language === 'bengali' ? 'পরীক্ষা' : 'visit(s)'}
+                        </p>
+                      </div>
+                      {activeCaseId === caseItem.caseId && (
+                        <CheckCircle2 className="w-5 h-5 text-primary" />
+                      )}
+                    </button>
+                  ))}
+
+                  {/* New Animal Option */}
+                  <button
+                    type="button"
+                    className={`w-full p-3 rounded-xl border-2 border-dashed flex items-center gap-3 transition-all ${!activeCaseId
+                      ? 'border-accent bg-accent/10'
+                      : 'border-border bg-card hover:border-accent/50'
+                      }`}
+                    onClick={() => {
+                      setActiveCaseId(null);
+                      setAnimalName("");
+                    }}
+                  >
+                    <div className="w-10 h-10 bg-accent/20 rounded-lg flex items-center justify-center">
+                      <span className="text-xl font-bold text-accent">+</span>
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="font-semibold text-foreground">
+                        {language === 'hindi' ? 'नया जानवर जोड़ें' : language === 'bengali' ? 'নতুন পশু যোগ করুন' : 'Add New Animal'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {language === 'hindi' ? 'पहली बार जाँच' : language === 'bengali' ? 'প্রথম পরীক্ষা' : 'First-time diagnosis'}
+                      </p>
+                    </div>
+                    {!activeCaseId && (
+                      <CheckCircle2 className="w-5 h-5 text-accent" />
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            ) : null}
 
-          {/* Primary Action - Analyze Button (Most Prominent) */}
-          <Button
-            type="submit"
-            className="w-full h-20 text-2xl font-bold rounded-2xl shadow-lg"
-            disabled={!file || loading}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-8 h-8 mr-4 animate-spin" />
-                {t.analyzing}
-              </>
-            ) : activeCaseId ? (
-              <>
-                <RefreshCw className="w-8 h-8 mr-4" />
-                {t.followUp}
-              </>
-            ) : (
-              <>
-                <Stethoscope className="w-8 h-8 mr-4" />
-                {t.analyze}
-              </>
+            {/* Media Preview - Primary Focus */}
+            {previewUrl && (
+              <div className="relative rounded-2xl overflow-hidden bg-muted border-4 border-primary shadow-lg">
+                {file?.type.startsWith('video/') ? (
+                  <video
+                    src={previewUrl}
+                    controls
+                    className="w-full max-h-72 object-contain"
+                    ref={videoRef}
+                  />
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="w-full max-h-72 object-contain"
+                  />
+                )}
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  className="absolute top-3 right-3 h-10 px-3"
+                  onClick={() => {
+                    setFile(null);
+                    setPreviewUrl(null);
+                  }}
+                >
+                  <X className="w-5 h-5 mr-1" />
+                  {language === 'hindi' ? 'हटाएं' : language === 'bengali' ? 'মুছুন' : 'Remove'}
+                </Button>
+                {/* Success indicator */}
+                <div className="absolute bottom-3 left-3 bg-success text-success-foreground px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  {language === 'hindi' ? 'फोटो/वीडियो तैयार' : language === 'bengali' ? 'ছবি/ভিডিও প্রস্তুত' : 'Media ready'}
+                </div>
+              </div>
             )}
-          </Button>
 
-          {/* Helper text */}
-          <p className="text-center text-muted-foreground text-sm">
-            {activeCaseId 
-              ? (language === 'hindi' 
-                  ? 'AI पिछली जाँच के साथ तुलना करेगा' 
-                  : language === 'bengali' 
-                    ? 'AI পূর্ববর্তী পরীক্ষার সাথে তুলনা করবে' 
+            {/* Primary Action - Analyze Button (Most Prominent) */}
+            <Button
+              type="submit"
+              className="w-full h-20 text-2xl font-bold rounded-2xl shadow-lg"
+              disabled={!file || loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-8 h-8 mr-4 animate-spin" />
+                  {t.analyzing}
+                </>
+              ) : activeCaseId ? (
+                <>
+                  <RefreshCw className="w-8 h-8 mr-4" />
+                  {t.followUp}
+                </>
+              ) : (
+                <>
+                  <Stethoscope className="w-8 h-8 mr-4" />
+                  {t.analyze}
+                </>
+              )}
+            </Button>
+
+            {/* Helper text */}
+            <p className="text-center text-muted-foreground text-sm">
+              {activeCaseId
+                ? (language === 'hindi'
+                  ? 'AI पिछली जाँच के साथ तुलना करेगा'
+                  : language === 'bengali'
+                    ? 'AI পূর্ববর্তী পরীক্ষার সাথে তুলনা করবে'
                     : 'AI will compare with previous diagnosis')
-              : (language === 'hindi' 
-                  ? 'ऊपर बटन दबाएं - AI आपके जानवर की जांच करेगा' 
-                  : language === 'bengali' 
-                    ? 'উপরের বোতাম টিপুন - AI আপনার পশুর পরীক্ষা করবে' 
+                : (language === 'hindi'
+                  ? 'ऊपर बटन दबाएं - AI आपके जानवर की जांच करेगा'
+                  : language === 'bengali'
+                    ? 'উপরের বোতাম টিপুন - AI আপনার পশুর পরীক্ষা করবে'
                     : 'Press above to let AI examine your animal')
-            }
-          </p>
+              }
+            </p>
 
-          {/* Error Display */}
-          {error && (
-            <div className="p-4 bg-destructive/10 border-2 border-destructive/30 rounded-xl flex items-start gap-3">
-              <AlertCircle className="w-6 h-6 text-destructive shrink-0 mt-0.5" />
-              <p className="text-sm text-destructive font-medium">{error}</p>
-            </div>
-          )}
+            {/* Error Display */}
+            {error && (
+              <div className="p-4 bg-destructive/10 border-2 border-destructive/30 rounded-xl flex items-start gap-3">
+                <AlertCircle className="w-6 h-6 text-destructive shrink-0 mt-0.5" />
+                <p className="text-sm text-destructive font-medium">{error}</p>
+              </div>
+            )}
 
-          {/* Optional Details Toggle */}
-          <button
-            type="button"
-            className="w-full flex items-center justify-between p-4 bg-secondary/50 rounded-xl border border-border"
-            onClick={() => setShowOptionalDetails(!showOptionalDetails)}
-          >
-            <div className="flex items-center gap-3">
-              <Info className="w-5 h-5 text-muted-foreground" />
-              <span className="text-base text-muted-foreground font-medium">
-                {language === 'hindi' 
-                  ? 'अधिक जानकारी जोड़ें (वैकल्पिक)' 
-                  : language === 'bengali' 
-                    ? 'আরও তথ্য যোগ করুন (ঐচ্ছিক)' 
-                    : 'Add more details (Optional)'}
-              </span>
-            </div>
-            <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${showOptionalDetails ? 'rotate-180' : ''}`} />
-          </button>
+            {/* Optional Details Toggle */}
+            <button
+              type="button"
+              className="w-full flex items-center justify-between p-4 bg-secondary/50 rounded-xl border border-border"
+              onClick={() => setShowOptionalDetails(!showOptionalDetails)}
+            >
+              <div className="flex items-center gap-3">
+                <Info className="w-5 h-5 text-muted-foreground" />
+                <span className="text-base text-muted-foreground font-medium">
+                  {language === 'hindi'
+                    ? 'अधिक जानकारी जोड़ें (वैकल्पिक)'
+                    : language === 'bengali'
+                      ? 'আরও তথ্য যোগ করুন (ঐচ্ছিক)'
+                      : 'Add more details (Optional)'}
+                </span>
+              </div>
+              <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${showOptionalDetails ? 'rotate-180' : ''}`} />
+            </button>
 
-          {/* Optional Fields - Collapsible */}
-          {showOptionalDetails && (
-            <div className="space-y-4 p-4 bg-secondary/30 rounded-xl border border-border animate-in slide-in-from-top-2">
-              {/* Animal Name - Only show for new animals */}
-              {!activeCaseId && (
+            {/* Optional Fields - Collapsible */}
+            {showOptionalDetails && (
+              <div className="space-y-4 p-4 bg-secondary/30 rounded-xl border border-border animate-in slide-in-from-top-2">
+                {/* Animal Name - Only show for new animals */}
+                {!activeCaseId && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      {t.animalName}
+                      <span className="text-xs bg-muted px-2 py-0.5 rounded">
+                        {language === 'hindi' ? 'वैकल्पिक' : language === 'bengali' ? 'ঐচ্ছিক' : 'Optional'}
+                      </span>
+                    </Label>
+                    <input
+                      type="text"
+                      placeholder={t.animalNamePlaceholder}
+                      value={animalName}
+                      onChange={(e) => setAnimalName(e.target.value)}
+                      className="w-full h-12 px-4 text-base rounded-xl border-2 border-border bg-card focus:border-primary focus:outline-none transition-colors"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {language === 'hindi'
+                        ? 'नाम देने से बाद में खोजना आसान होगा'
+                        : language === 'bengali'
+                          ? 'নাম দিলে পরে খুঁজে পাওয়া সহজ হবে'
+                          : 'Naming helps you find this animal later'}
+                    </p>
+                  </div>
+                )}
+
+                {/* Symptoms - Optional */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    {t.animalName}
+                    {t.symptoms}
                     <span className="text-xs bg-muted px-2 py-0.5 rounded">
                       {language === 'hindi' ? 'वैकल्पिक' : language === 'bengali' ? 'ঐচ্ছিক' : 'Optional'}
                     </span>
                   </Label>
-                  <input
-                    type="text"
-                    placeholder={t.animalNamePlaceholder}
-                    value={animalName}
-                    onChange={(e) => setAnimalName(e.target.value)}
-                    className="w-full h-12 px-4 text-base rounded-xl border-2 border-border bg-card focus:border-primary focus:outline-none transition-colors"
+                  <Textarea
+                    placeholder={t.symptomsPlaceholder}
+                    value={symptoms}
+                    onChange={(e) => setSymptoms(e.target.value)}
+                    className="min-h-[80px] text-base rounded-xl border-2 border-border bg-card focus:border-primary resize-none"
                   />
                   <p className="text-xs text-muted-foreground">
-                    {language === 'hindi' 
-                      ? 'नाम देने से बाद में खोजना आसान होगा' 
-                      : language === 'bengali' 
-                        ? 'নাম দিলে পরে খুঁজে পাওয়া সহজ হবে' 
-                        : 'Naming helps you find this animal later'}
+                    {language === 'hindi'
+                      ? 'लक्षण बताने से बेहतर परिणाम मिलेंगे, लेकिन जरूरी नहीं है'
+                      : language === 'bengali'
+                        ? 'লক্ষণ জানালে ভালো ফলাফল পাবেন, কিন্তু বাধ্যতামূলক নয়'
+                        : 'Adding symptoms helps get better results, but is not required'}
                   </p>
                 </div>
-              )}
-
-              {/* Symptoms - Optional */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  {t.symptoms}
-                  <span className="text-xs bg-muted px-2 py-0.5 rounded">
-                    {language === 'hindi' ? 'वैकल्पिक' : language === 'bengali' ? 'ঐচ্ছিক' : 'Optional'}
-                  </span>
-                </Label>
-                <Textarea
-                  placeholder={t.symptomsPlaceholder}
-                  value={symptoms}
-                  onChange={(e) => setSymptoms(e.target.value)}
-                  className="min-h-[80px] text-base rounded-xl border-2 border-border bg-card focus:border-primary resize-none"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {language === 'hindi' 
-                    ? 'लक्षण बताने से बेहतर परिणाम मिलेंगे, लेकिन जरूरी नहीं है' 
-                    : language === 'bengali' 
-                      ? 'লক্ষণ জানালে ভালো ফলাফল পাবেন, কিন্তু বাধ্যতামূলক নয়' 
-                      : 'Adding symptoms helps get better results, but is not required'}
-                </p>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Retake/Change Photo Option */}
-          <div className="flex gap-3">
-            <button
-              type="button"
-              className="flex-1 relative bg-card border-2 border-border rounded-xl p-4 flex items-center justify-center gap-2 hover:border-primary transition-colors"
-            >
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                onChange={handleFileChange}
-              />
-              <Camera className="w-5 h-5 text-primary" />
-              <span className="text-sm font-medium">
-                {language === 'hindi' ? 'नई फोटो' : language === 'bengali' ? 'নতুন ছবি' : 'New Photo'}
-              </span>
-            </button>
-            <button
-              type="button"
-              className="flex-1 relative bg-card border-2 border-border rounded-xl p-4 flex items-center justify-center gap-2 hover:border-accent transition-colors"
-            >
-              <input
-                type="file"
-                accept="video/*"
-                capture="environment"
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                onChange={handleFileChange}
-              />
-              <Video className="w-5 h-5 text-accent" />
-              <span className="text-sm font-medium">
-                {language === 'hindi' ? 'नया वीडियो' : language === 'bengali' ? 'নতুন ভিডিও' : 'New Video'}
-              </span>
-            </button>
-          </div>
-        </form>
-      </main>
-    </div>
-  );
+            {/* Retake/Change Photo Option */}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                className="flex-1 relative bg-card border-2 border-border rounded-xl p-4 flex items-center justify-center gap-2 hover:border-primary transition-colors"
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  onChange={handleFileChange}
+                />
+                <Camera className="w-5 h-5 text-primary" />
+                <span className="text-sm font-medium">
+                  {language === 'hindi' ? 'नई फोटो' : language === 'bengali' ? 'নতুন ছবি' : 'New Photo'}
+                </span>
+              </button>
+              <button
+                type="button"
+                className="flex-1 relative bg-card border-2 border-border rounded-xl p-4 flex items-center justify-center gap-2 hover:border-accent transition-colors"
+              >
+                <input
+                  type="file"
+                  accept="video/*"
+                  capture="environment"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  onChange={handleFileChange}
+                />
+                <Video className="w-5 h-5 text-accent" />
+                <span className="text-sm font-medium">
+                  {language === 'hindi' ? 'नया वीडियो' : language === 'bengali' ? 'নতুন ভিডিও' : 'New Video'}
+                </span>
+              </button>
+            </div>
+          </form>
+        </main>
+      </div>
+    );
   };
 
   // Result Screen
@@ -1122,9 +1151,9 @@ export default function PashuKrishiRakshak() {
       <header className="bg-primary text-primary-foreground p-4 safe-area-top">
         <div className="flex items-center justify-between max-w-lg mx-auto">
           <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="text-primary-foreground hover:bg-primary-foreground/20"
               onClick={() => {
                 stopSpeaking();
@@ -1291,9 +1320,9 @@ export default function PashuKrishiRakshak() {
     <div className="min-h-screen bg-background flex flex-col">
       <header className="bg-primary text-primary-foreground p-4 safe-area-top">
         <div className="flex items-center gap-4 max-w-lg mx-auto">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className="text-primary-foreground hover:bg-primary-foreground/20"
             onClick={() => setCurrentScreen('home')}
           >
@@ -1331,9 +1360,9 @@ export default function PashuKrishiRakshak() {
       <div className="min-h-screen bg-background flex flex-col">
         <header className="bg-primary text-primary-foreground p-4 safe-area-top">
           <div className="flex items-center gap-4 max-w-lg mx-auto">
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="text-primary-foreground hover:bg-primary-foreground/20"
               onClick={() => {
                 setActiveCaseId(null);
@@ -1383,9 +1412,9 @@ export default function PashuKrishiRakshak() {
     <div className="min-h-screen bg-background flex flex-col">
       <header className="bg-primary text-primary-foreground p-4 safe-area-top">
         <div className="flex items-center gap-4 max-w-lg mx-auto">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className="text-primary-foreground hover:bg-primary-foreground/20"
             onClick={() => setCurrentScreen('home')}
           >
@@ -1439,7 +1468,7 @@ export default function PashuKrishiRakshak() {
                   className="h-12 w-12"
                   onClick={() => navigator.clipboard.writeText(userId)}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>
                 </Button>
               </div>
             </CardContent>

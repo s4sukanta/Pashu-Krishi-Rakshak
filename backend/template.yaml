@@ -1,0 +1,197 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless backend for Pashu Krishi Rakshak
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: nodejs20.x
+
+Resources:
+  # ==========================================
+  # Cognito User Pool
+  # ==========================================
+  PashuKrishiUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: PashuKrishiUsers
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: false
+          RequireNumbers: true
+          RequireSymbols: false
+          RequireUppercase: false
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      MfaConfiguration: 'OFF'
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: true
+
+  PashuKrishiUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: PashuKrishiWebClient
+      UserPoolId: !Ref PashuKrishiUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+
+  # ==========================================
+  # API Gateway with Cognito Authorizer
+  # ==========================================
+  PashuKrishiApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowMethods: "'GET,POST,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+      Auth:
+        DefaultAuthorizer: CognitoAuth
+        AddDefaultAuthorizerToCorsPreflight: false
+        Authorizers:
+          CognitoAuth:
+            UserPoolArn: !GetAtt PashuKrishiUserPool.Arn
+
+  # ==========================================
+  # Lambda Functions
+  # ==========================================
+  
+  AnalyzeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/analyze/
+      Handler: index.handler
+      Environment:
+        Variables:
+          TABLE_HISTORY: !Ref HistoryTable
+          TABLE_USAGE: !Ref UsageLogsTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - bedrock:Retrieve
+              Resource: "*"
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: 
+                - !GetAtt HistoryTable.Arn
+                - !GetAtt UsageLogsTable.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /analyze
+            Method: post
+            RestApiId: !Ref PashuKrishiApi
+
+  HistoryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/history/
+      Handler: index.handler
+      Environment:
+        Variables:
+          TABLE_HISTORY: !Ref HistoryTable
+          TABLE_USAGE: !Ref UsageLogsTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:DeleteItem
+              Resource: 
+                - !GetAtt HistoryTable.Arn
+                - !GetAtt UsageLogsTable.Arn
+      Events:
+        ApiGetEvent:
+          Type: Api
+          Properties:
+            Path: /history
+            Method: get
+            RestApiId: !Ref PashuKrishiApi
+        ApiDeleteEvent:
+          Type: Api
+          Properties:
+            Path: /history
+            Method: delete
+            RestApiId: !Ref PashuKrishiApi
+
+  LocationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/location/
+      Handler: index.handler
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - geo-places:SearchText
+              Resource: "*"
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /location
+            Method: post
+            RestApiId: !Ref PashuKrishiApi
+
+  # ==========================================
+  # DynamoDB Tables (Re-defining here for a complete stack, 
+  # though they might already exist)
+  # ==========================================
+  HistoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: PashuKrishi_History_V2
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+
+  UsageLogsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: PashuKrishi_UsageLogs_V2
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${PashuKrishiApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  UserPoolId:
+    Description: "Cognito User Pool ID"
+    Value: !Ref PashuKrishiUserPool
+  UserPoolClientId:
+    Description: "Cognito App Client ID"
+    Value: !Ref PashuKrishiUserPoolClient
