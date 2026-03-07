@@ -66,6 +66,31 @@ Resources:
             UserPoolArn: !GetAtt PashuKrishiUserPool.Arn
 
   # ==========================================
+  # API Gateway Responses for CORS on Errors
+  # ==========================================
+  ApiGatewayResponse401:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref PashuKrishiApi
+      ResponseType: UNAUTHORIZED
+      StatusCode: '401'
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'https://main.dz4umnvfh0vrz.amplifyapp.com'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        gatewayresponse.header.Access-Control-Allow-Credentials: "'true'"
+
+  ApiGatewayResponse403:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref PashuKrishiApi
+      ResponseType: ACCESS_DENIED
+      StatusCode: '403'
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'https://main.dz4umnvfh0vrz.amplifyapp.com'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        gatewayresponse.header.Access-Control-Allow-Credentials: "'true'"
+
+  # ==========================================
   # Lambda Functions
   # ==========================================
   
