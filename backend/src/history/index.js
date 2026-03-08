@@ -13,7 +13,7 @@ exports.handler = async (event) => {
             const userId = event.requestContext?.authorizer?.claims?.sub || event.queryStringParameters?.userId;
 
             if (!userId) {
-                return { statusCode: 400, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ error: "Missing userId" }) };
+                return { statusCode: 400, headers: { "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*" }, body: JSON.stringify({ error: "Missing userId" }) };
             }
 
             const historyCommand = new QueryCommand({
@@ -36,7 +36,7 @@ exports.handler = async (event) => {
             const history = (historyResponse.Items || []).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             const usageLogs = (usageResponse.Items || []).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-            return { statusCode: 200, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ history, usageLogs }) };
+            return { statusCode: 200, headers: { "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*" }, body: JSON.stringify({ history, usageLogs }) };
         }
 
         else if (method === "DELETE") {
@@ -47,11 +47,11 @@ exports.handler = async (event) => {
             const { caseId, timestamp } = body;
 
             if (!userId) {
-                return { statusCode: 400, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ error: "Missing userId" }) };
+                return { statusCode: 400, headers: { "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*" }, body: JSON.stringify({ error: "Missing userId" }) };
             }
 
             if (!caseId && !timestamp) {
-                return { statusCode: 400, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ error: "Must provide caseId or timestamp" }) };
+                return { statusCode: 400, headers: { "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*" }, body: JSON.stringify({ error: "Must provide caseId or timestamp" }) };
             }
 
             let itemsToDelete = [];
@@ -73,7 +73,7 @@ exports.handler = async (event) => {
             }
 
             if (itemsToDelete.length === 0) {
-                return { statusCode: 200, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ message: "No matching records found to delete." }) };
+                return { statusCode: 200, headers: { "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*" }, body: JSON.stringify({ message: "No matching records found to delete." }) };
             }
 
             const deletePromises = itemsToDelete.map(key =>
@@ -85,7 +85,7 @@ exports.handler = async (event) => {
 
             await Promise.all(deletePromises);
 
-            return { statusCode: 200, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ message: "Successfully deleted records", deletedCount: itemsToDelete.length }) };
+            return { statusCode: 200, headers: { "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*" }, body: JSON.stringify({ message: "Successfully deleted records", deletedCount: itemsToDelete.length }) };
         }
 
         return { statusCode: 405, body: "Method Not Allowed" };
@@ -94,7 +94,7 @@ exports.handler = async (event) => {
         console.error("DynamoDB Handler Error:", error);
         return {
             statusCode: 500,
-            headers: { "Access-Control-Allow-Origin": "*" },
+            headers: { "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*" },
             body: JSON.stringify({ error: "Failed to process history", details: error.message })
         };
     }

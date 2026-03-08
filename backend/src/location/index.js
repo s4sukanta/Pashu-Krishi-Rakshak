@@ -22,7 +22,7 @@ exports.handler = async (event) => {
         const { latitude, longitude } = body;
 
         if (latitude === undefined || longitude === undefined) {
-            return { statusCode: 400, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ error: 'Missing coordinates' }) };
+            return { statusCode: 400, headers: { "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*" }, body: JSON.stringify({ error: 'Missing coordinates' }) };
         }
 
         const command = new SearchTextCommand({
@@ -45,7 +45,7 @@ exports.handler = async (event) => {
 
             return {
                 statusCode: 200,
-                headers: { "Access-Control-Allow-Origin": "*" },
+                headers: { "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*" },
                 body: JSON.stringify({
                     name: topResult.Title || "Veterinary Pharmacy",
                     address: topResult.Address?.Label,
@@ -54,13 +54,13 @@ exports.handler = async (event) => {
             }
         }
 
-        return { statusCode: 404, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ message: "No nearby veterinary pharmacies found." }) };
+        return { statusCode: 404, headers: { "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*" }, body: JSON.stringify({ message: "No nearby veterinary pharmacies found." }) };
 
     } catch (error) {
         console.error("Location API Error:", error);
         return {
             statusCode: 500,
-            headers: { "Access-Control-Allow-Origin": "*" },
+            headers: { "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*" },
             body: JSON.stringify({ error: "Failed to search for locations", details: error.message })
         };
     }

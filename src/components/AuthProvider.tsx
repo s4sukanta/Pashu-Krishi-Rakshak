@@ -1,20 +1,20 @@
 "use client";
 
-import { Authenticator } from '@aws-amplify/ui-react';
-import '@aws-amplify/ui-react/styles.css';
 import { configureAmplify } from '../aws-exports';
 import { useEffect, useState, createContext, useContext } from 'react';
 import { useRouter } from 'next/navigation';
 
+interface AuthUser {
+    username: string;
+    userId: string;
+    signInDetails?: {
+        loginId?: string;
+    };
+}
+
 interface AuthContextType {
     signOut?: () => void;
-    user?: {
-        username: string;
-        userId: string;
-        signInDetails?: {
-            loginId?: string;
-        };
-    };
+    user?: AuthUser;
 }
 
 const AuthContext = createContext<AuthContextType>({});
@@ -27,74 +27,49 @@ interface AuthProviderProps {
 }
 
 export default function AuthProvider({ children, requireAuth = false }: AuthProviderProps) {
-    const [configured, setConfigured] = useState(false);
     const [checking, setChecking] = useState(true);
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [authState, setAuthState] = useState<AuthContextType>({});
     const router = useRouter();
 
     useEffect(() => {
         configureAmplify();
-        setConfigured(true);
-    }, []);
 
-    useEffect(() => {
-        if (!configured || !requireAuth) return;
-
-        const checkAuth = async () => {
+        const initAuth = async () => {
             try {
-                const { getCurrentUser } = await import('aws-amplify/auth');
-                await getCurrentUser();
-                setIsAuthenticated(true);
+                const { getCurrentUser, signOut } = await import('aws-amplify/auth');
+                const user = await getCurrentUser();
+                setAuthState({
+                    signOut: async () => {
+                        await signOut();
+                        router.push('/landing');
+                    },
+                    user: user as AuthUser,
+                });
             } catch {
-                setIsAuthenticated(false);
-                router.push('/landing');
+                if (requireAuth) {
+                    router.push('/landing');
+                }
             } finally {
                 setChecking(false);
             }
         };
 
-        checkAuth();
-    }, [configured, requireAuth, router]);
+        initAuth();
+    }, [requireAuth, router]);
 
-    if (!configured) {
+    if (checking) {
         return null;
     }
 
-    // If requireAuth is true and we're still checking, show nothing
-    if (requireAuth && checking) {
+    if (requireAuth && !authState.user) {
         return null;
     }
 
-    // If requireAuth is true and not authenticated, show nothing (redirecting)
-    if (requireAuth && !isAuthenticated) {
-        return null;
-    }
-
-    // If requireAuth is false, show the Authenticator UI (for login page)
-    if (!requireAuth) {
-        return (
-            <Authenticator>
-                {({ signOut, user }) => (
-                    <AuthContext.Provider value={{ signOut, user }}>
-                        <main className="w-full h-full">
-                            {children}
-                        </main>
-                    </AuthContext.Provider>
-                )}
-            </Authenticator>
-        );
-    }
-
-    // If requireAuth is true and authenticated, render children with auth context
     return (
-        <Authenticator>
-            {({ signOut, user }) => (
-                <AuthContext.Provider value={{ signOut, user }}>
-                    <main className="w-full h-full">
-                        {children}
-                    </main>
-                </AuthContext.Provider>
-            )}
-        </Authenticator>
+        <AuthContext.Provider value={authState}>
+            <main className="w-full h-full">
+                {children}
+            </main>
+        </AuthContext.Provider>
     );
 }

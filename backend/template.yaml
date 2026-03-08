@@ -2,11 +2,20 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Serverless backend for Pashu Krishi Rakshak
 
+Parameters:
+  AllowedOrigin:
+    Type: String
+    Default: "https://main.dz4umnvfh0vrz.amplifyapp.com"
+    Description: "Allowed CORS origin (Amplify domain)"
+
 Globals:
   Function:
     Timeout: 30
     MemorySize: 256
     Runtime: nodejs20.x
+    Environment:
+      Variables:
+        ALLOWED_ORIGIN: !Ref AllowedOrigin
 
 Resources:
   # ==========================================
@@ -56,44 +65,36 @@ Resources:
       Cors:
         AllowMethods: "'GET,POST,DELETE,OPTIONS'"
         AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-        AllowOrigin: "'https://main.dz4umnvfh0vrz.amplifyapp.com'"
-        AllowCredentials: true
+        AllowOrigin: !Sub "'${AllowedOrigin}'"
       Auth:
         DefaultAuthorizer: CognitoAuth
         AddDefaultAuthorizerToCorsPreflight: false
         Authorizers:
           CognitoAuth:
             UserPoolArn: !GetAtt PashuKrishiUserPool.Arn
-
-  # ==========================================
-  # API Gateway Responses for CORS on Errors
-  # ==========================================
-  ApiGatewayResponse401:
-    Type: AWS::ApiGateway::GatewayResponse
-    Properties:
-      RestApiId: !Ref PashuKrishiApi
-      ResponseType: UNAUTHORIZED
-      StatusCode: '401'
-      ResponseParameters:
-        gatewayresponse.header.Access-Control-Allow-Origin: "'https://main.dz4umnvfh0vrz.amplifyapp.com'"
-        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-        gatewayresponse.header.Access-Control-Allow-Credentials: "'true'"
-
-  ApiGatewayResponse403:
-    Type: AWS::ApiGateway::GatewayResponse
-    Properties:
-      RestApiId: !Ref PashuKrishiApi
-      ResponseType: ACCESS_DENIED
-      StatusCode: '403'
-      ResponseParameters:
-        gatewayresponse.header.Access-Control-Allow-Origin: "'https://main.dz4umnvfh0vrz.amplifyapp.com'"
-        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-        gatewayresponse.header.Access-Control-Allow-Credentials: "'true'"
+      GatewayResponses:
+        UNAUTHORIZED:
+          StatusCode: "401"
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: !Sub "'${AllowedOrigin}'"
+              Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        ACCESS_DENIED:
+          StatusCode: "403"
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: !Sub "'${AllowedOrigin}'"
+              Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        DEFAULT_4XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: !Sub "'${AllowedOrigin}'"
+              Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
 
   # ==========================================
   # Lambda Functions
   # ==========================================
-  
+
   AnalyzeFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -115,7 +116,7 @@ Resources:
             - Effect: Allow
               Action:
                 - dynamodb:PutItem
-              Resource: 
+              Resource:
                 - !GetAtt HistoryTable.Arn
                 - !GetAtt UsageLogsTable.Arn
       Events:
@@ -141,7 +142,7 @@ Resources:
               Action:
                 - dynamodb:Query
                 - dynamodb:DeleteItem
-              Resource: 
+              Resource:
                 - !GetAtt HistoryTable.Arn
                 - !GetAtt UsageLogsTable.Arn
       Events:
@@ -178,8 +179,7 @@ Resources:
             RestApiId: !Ref PashuKrishiApi
 
   # ==========================================
-  # DynamoDB Tables (Re-defining here for a complete stack, 
-  # though they might already exist)
+  # DynamoDB Tables
   # ==========================================
   HistoryTable:
     Type: AWS::DynamoDB::Table

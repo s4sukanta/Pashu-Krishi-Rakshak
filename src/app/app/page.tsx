@@ -256,6 +256,17 @@ export default function PashuKrishiRakshak() {
     }
   }, [user, router]);
 
+  /** Get a valid auth token, or throw if unavailable */
+  const getAuthToken = async (): Promise<string> => {
+    const { fetchAuthSession } = await import('aws-amplify/auth');
+    const session = await fetchAuthSession();
+    const token = session.tokens?.idToken?.toString();
+    if (!token) {
+      throw new Error('No auth token available — session may have expired');
+    }
+    return token;
+  };
+
   const t = translations[language];
 
   const groupCases = (historyRecords: DiagnosisRecord[]) => {
@@ -298,14 +309,13 @@ export default function PashuKrishiRakshak() {
       const { fetchAuthSession } = await import('aws-amplify/auth');
       const session = await fetchAuthSession();
       const uid = session.userSub;
-      const token = session.tokens?.accessToken?.toString() || '';
+      const token = session.tokens?.idToken?.toString();
 
-      if (!uid) return;
+      if (!uid || !token) return;
       setUserId(uid);
 
       const API_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, "");
-      
-      // Check if API_URL is configured
+
       if (!API_URL) {
         console.warn("API_URL not configured, skipping remote data fetch");
         return;
@@ -369,9 +379,7 @@ export default function PashuKrishiRakshak() {
     }
 
     try {
-      const { fetchAuthSession } = await import('aws-amplify/auth');
-      const session = await fetchAuthSession();
-      const token = session.tokens?.accessToken?.toString() || '';
+      const token = await getAuthToken();
       const API_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, "");
 
       await fetch(`${API_URL}/history`, {
@@ -401,9 +409,7 @@ export default function PashuKrishiRakshak() {
     }
 
     try {
-      const { fetchAuthSession } = await import('aws-amplify/auth');
-      const session = await fetchAuthSession();
-      const token = session.tokens?.accessToken?.toString() || '';
+      const token = await getAuthToken();
       const API_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, "");
 
       await fetch(`${API_URL}/history`, {
@@ -600,21 +606,12 @@ export default function PashuKrishiRakshak() {
     }
 
     try {
-      const { fetchAuthSession } = await import('aws-amplify/auth');
-      const session = await fetchAuthSession();
-      const token = session.tokens?.accessToken?.toString() || '';
+      const token = await getAuthToken();
       const API_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, "");
 
-      // Validate environment variables
-      if (!API_URL || API_URL === '') {
+      if (!API_URL) {
         throw new Error("API URL is not configured. Please check Amplify Console environment variables.");
       }
-
-      console.log('=== DIAGNOSTIC INFO ===');
-      console.log('API URL:', API_URL);
-      console.log('User ID:', userId);
-      console.log('Token:', token ? 'Present' : 'Missing');
-      console.log('File:', file ? `${file.name} (${file.size} bytes)` : 'No file');
 
       const response = await fetch(`${API_URL}/analyze`, {
         method: "POST",

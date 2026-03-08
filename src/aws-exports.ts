@@ -1,6 +1,9 @@
 import { Amplify } from 'aws-amplify';
 
+let configured = false;
+
 export const configureAmplify = () => {
+    if (configured) return;
     Amplify.configure({
         Auth: {
             Cognito: {
@@ -8,13 +11,6 @@ export const configureAmplify = () => {
                 userPoolClientId: process.env.NEXT_PUBLIC_USER_POOL_CLIENT_ID || '',
             }
         },
-        API: {
-            REST: {
-                PashuKrishiApi: {
-                    endpoint: process.env.NEXT_PUBLIC_API_URL || '',
-                    region: process.env.NEXT_PUBLIC_AWS_REGION || 'us-east-1'
-                }
-            }
-        }
     });
+    configured = true;
 };

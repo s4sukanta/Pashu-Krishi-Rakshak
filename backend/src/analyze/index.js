@@ -244,7 +244,7 @@ exports.handler = async (event) => {
 
         return {
             statusCode: 200,
-            headers: { "Access-Control-Allow-Origin": "*" },
+            headers: { "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*" },
             body: JSON.stringify({ result: cleanedOutput, modelUsed, caseId: finalCaseId })
         };
 
@@ -252,7 +252,7 @@ exports.handler = async (event) => {
         console.error("Bedrock API Error:", error);
         return {
             statusCode: 500,
-            headers: { "Access-Control-Allow-Origin": "*" },
+            headers: { "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*" },
             body: JSON.stringify({ error: "Error processing image", details: error.message })
         };
     }
