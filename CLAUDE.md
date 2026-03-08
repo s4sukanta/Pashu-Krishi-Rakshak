@@ -56,7 +56,7 @@ backend/
 tests/
   setup.ts              # Loads .env.local via dotenv
   bug-exploration.test.ts  # Documents User Pool ARN mismatch bug
-docs/                   # Project documentation (design, requirements, deployment)
+docs/                   # Project documentation (core docs + archive/ for historical)
 ```
 
 ## Architecture

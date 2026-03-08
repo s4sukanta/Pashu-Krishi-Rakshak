@@ -235,8 +235,8 @@ AWS Amplify Hosting automatically:
 ## Next Steps
 
 1. ✅ Backend deployed (SAM)
-2. ⏳ Deploy frontend to Amplify Hosting
-3. ⏳ Test end-to-end flow
+2. ✅ Deploy frontend to Amplify Hosting
+3. ✅ Test end-to-end flow
 4. ⏳ Set up custom domain (optional)
 5. ⏳ Configure monitoring and alerts
 6. ⏳ Set up CI/CD pipeline (automatic with Amplify)
