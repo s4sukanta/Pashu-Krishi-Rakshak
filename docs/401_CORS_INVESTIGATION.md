@@ -17,6 +17,8 @@
 - `backend/template.yaml`: Fixed `GatewayResponses` syntax (moved from separate resources to API property)
 - All Lambda functions: Added CORS headers using `process.env.ALLOWED_ORIGIN`
 
+**Status**: Users can now successfully authenticate and make API calls.
+
 ---
 
 ## Original Investigation (For Historical Reference)

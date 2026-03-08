@@ -596,7 +596,9 @@ export default function PashuKrishiRakshak() {
       const frames = await extractFrames(file, 4);
       if (frames.length > 0) {
         frames.forEach((blob, index) => {
-          formData.append("media", blob, `frame_${index}.jpg`);
+          // Create a proper File object with explicit MIME type to ensure it's preserved
+          const frameFile = new File([blob], `frame_${index}.jpg`, { type: 'image/jpeg' });
+          formData.append("media", frameFile);
         });
       } else {
         formData.append("media", file);

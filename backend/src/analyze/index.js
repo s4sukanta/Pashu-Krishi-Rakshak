@@ -74,6 +74,8 @@ exports.handler = async (event) => {
 
             const isVideo = mimeType.startsWith("video/");
             const isImage = mimeType.startsWith("image/");
+            
+            console.log('Processing media - MIME type:', mimeType, 'isImage:', isImage, 'isVideo:', isVideo);
 
             if (isImage && !["image/jpeg", "image/png", "image/webp", "image/gif"].includes(mimeType)) {
                 return { statusCode: 400, body: JSON.stringify({ error: "Invalid image type. Supported types are jpeg, png, webp, and gif." }) };
@@ -261,7 +263,7 @@ exports.handler = async (event) => {
 // Helper to parse multipart/form-data using busboy
 function parseMultipartFormData(buffer, contentType) {
     return new Promise((resolve, reject) => {
-        const bb = busboy({ headers: { 'content-type': contentType } });
+        const bb = Busboy({ headers: { 'content-type': contentType } });
         const result = { media: [] };
 
         bb.on('file', (name, file, info) => {
@@ -269,9 +271,29 @@ function parseMultipartFormData(buffer, contentType) {
             const chunks = [];
             file.on('data', (data) => chunks.push(data));
             file.on('end', () => {
+                // Fallback: detect MIME type from filename if it's application/octet-stream
+                let detectedMimeType = mimeType;
+                console.log('Original MIME type from busboy:', mimeType, 'for file:', filename);
+                
+                if (!mimeType || mimeType === 'application/octet-stream') {
+                    const ext = filename.toLowerCase().split('.').pop();
+                    const mimeMap = {
+                        'jpg': 'image/jpeg',
+                        'jpeg': 'image/jpeg',
+                        'png': 'image/png',
+                        'gif': 'image/gif',
+                        'webp': 'image/webp',
+                        'mp4': 'video/mp4',
+                        'mov': 'video/quicktime',
+                        'avi': 'video/x-msvideo'
+                    };
+                    detectedMimeType = mimeMap[ext] || mimeType;
+                    console.log('Detected MIME type from extension:', detectedMimeType, 'from extension:', ext);
+                }
+                
                 result.media.push({
                     filename,
-                    mimeType,
+                    mimeType: detectedMimeType,
                     content: Buffer.concat(chunks)
                 });
             });
