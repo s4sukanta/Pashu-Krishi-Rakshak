@@ -62,6 +62,10 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: Prod
+      BinaryMediaTypes:
+        - 'multipart/form-data'
+        - 'image/*'
+        - 'video/*'
       Cors:
         AllowMethods: "'GET,POST,DELETE,OPTIONS'"
         AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"

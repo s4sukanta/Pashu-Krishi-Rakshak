@@ -28,8 +28,14 @@ exports.handler = async (event) => {
             return { statusCode: 400, body: JSON.stringify({ error: "Request must be multipart/form-data" }) };
         }
 
+        console.log('isBase64Encoded:', event.isBase64Encoded);
+        console.log('Body type:', typeof event.body);
+        console.log('Body length:', event.body ? event.body.length : 0);
+
         // API Gateway sets isBase64Encoded if it's binary data
         const bodyBuffer = event.isBase64Encoded ? Buffer.from(event.body, "base64") : Buffer.from(event.body);
+        
+        console.log('Buffer length after parsing:', bodyBuffer.length);
 
         const formData = await parseMultipartFormData(bodyBuffer, contentType);
 
@@ -69,6 +75,7 @@ exports.handler = async (event) => {
         const contentBlocks = [];
 
         for (const mediaFile of mediaFiles) {
+            // For InvokeModel API, bytes field expects base64-encoded string
             const base64Media = mediaFile.content.toString("base64");
             const mimeType = mediaFile.mimeType;
 
@@ -76,6 +83,8 @@ exports.handler = async (event) => {
             const isImage = mimeType.startsWith("image/");
             
             console.log('Processing media - MIME type:', mimeType, 'isImage:', isImage, 'isVideo:', isVideo);
+            console.log('Base64 length:', base64Media.length, 'First 50 chars:', base64Media.substring(0, 50));
+            console.log('Format will be:', mimeType.replace("image/", ""));
 
             if (isImage && !["image/jpeg", "image/png", "image/webp", "image/gif"].includes(mimeType)) {
                 return { statusCode: 400, body: JSON.stringify({ error: "Invalid image type. Supported types are jpeg, png, webp, and gif." }) };
@@ -105,6 +114,8 @@ exports.handler = async (event) => {
                 });
             }
         }
+        
+        console.log('Content blocks created:', contentBlocks.length, 'blocks');
 
         // --- STEP 1: VISUAL TRIAGE ---
         const triagePayload = {
@@ -271,9 +282,15 @@ function parseMultipartFormData(buffer, contentType) {
             const chunks = [];
             file.on('data', (data) => chunks.push(data));
             file.on('end', () => {
+                const fileBuffer = Buffer.concat(chunks);
+                
                 // Fallback: detect MIME type from filename if it's application/octet-stream
                 let detectedMimeType = mimeType;
                 console.log('Original MIME type from busboy:', mimeType, 'for file:', filename);
+                
+                // Check file magic bytes to verify it's actually a JPEG
+                const magicBytes = fileBuffer.slice(0, 4).toString('hex');
+                console.log('File magic bytes (hex):', magicBytes, 'Buffer length:', fileBuffer.length);
                 
                 if (!mimeType || mimeType === 'application/octet-stream') {
                     const ext = filename.toLowerCase().split('.').pop();
@@ -294,7 +311,7 @@ function parseMultipartFormData(buffer, contentType) {
                 result.media.push({
                     filename,
                     mimeType: detectedMimeType,
-                    content: Buffer.concat(chunks)
+                    content: fileBuffer
                 });
             });
         });
