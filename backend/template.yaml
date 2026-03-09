@@ -12,7 +12,7 @@ Globals:
   Function:
     Timeout: 30
     MemorySize: 256
-    Runtime: nodejs20.x
+    Runtime: nodejs22.x
     Environment:
       Variables:
         ALLOWED_ORIGIN: !Ref AllowedOrigin

@@ -58,14 +58,14 @@ AI-powered veterinary and crop diagnosis application for rural Indian farmers, p
 - Protected API endpoints
 - User-specific data isolation
 
-### 7. Progressive Web App
-**Mobile-First Design**:
+### 7. Mobile-First Design
+**Responsive Interface**:
 
-- Installable on mobile devices
+- Installable on mobile devices (Web App Manifest)
 - Camera integration
 - Video recording support
 - Responsive design
-- Offline asset caching
+- Large touch targets for rural users
 
 ### 8. Knowledge Base Integration
 **Technology**: AWS Bedrock Knowledge Bases
@@ -78,7 +78,7 @@ AI-powered veterinary and crop diagnosis application for rural Indian farmers, p
 ## Technical Architecture
 
 ### Frontend
-- Next.js 15 (App Router)
+- Next.js 16 (App Router)
 - React 19, TypeScript
 - Tailwind CSS v4
 - shadcn/ui components
@@ -125,9 +125,8 @@ Input → Nova Lite Triage → Knowledge Retrieval → Grounding → Nova Pro Sy
 
 1. **Accessibility**: High contrast, screen reader support, voice output
 2. **Simplicity**: Large buttons, clear icons, minimal text
-3. **Offline-First**: Core features work without internet
-4. **Mobile-Optimized**: Touch-friendly, camera-first interface
-5. **Culturally Aware**: Local languages, INR pricing, rural context
+3. **Mobile-Optimized**: Touch-friendly, camera-first interface
+4. **Culturally Aware**: Local languages, INR pricing, rural context
 
 ## AWS Services
 
@@ -144,11 +143,10 @@ Input → Nova Lite Triage → Knowledge Retrieval → Grounding → Nova Pro Sy
 
 ## Performance
 
-- Diagnosis time: <30 seconds
-- API response: <3 seconds
-- Image upload: Progressive
-- Serverless auto-scaling
+- Serverless auto-scaling (Lambda + API Gateway)
 - Pay-per-use pricing
+- CloudFront CDN for frontend assets
+- Lambda timeout: 120s (handles complex multi-step AI pipeline)
 
 ## Security
 
