@@ -40,7 +40,7 @@ Pashu-Krishi Rakshak ("Livestock-Crop Protector") uses AWS Bedrock's multimodal 
 ## Tech Stack
 
 - **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS v4, shadcn/ui
-- **Backend**: AWS Lambda (Node.js 20), API Gateway, AWS SAM
+- **Backend**: AWS Lambda (Node.js 22), API Gateway, AWS SAM
 - **AI/ML**: AWS Bedrock (Nova Lite + Nova Pro), Bedrock Knowledge Bases
 - **Auth**: AWS Cognito with Amplify UI
 - **Database**: Amazon DynamoDB
@@ -85,6 +85,7 @@ NEXT_PUBLIC_AWS_REGION=us-east-1
 | [Getting Started](docs/README.md) | Installation and usage guide |
 | [System Design](docs/design.md) | Architecture and design decisions |
 | [Requirements](docs/requirements.md) | Formal acceptance criteria |
+| [AWS Architecture](docs/AWS_ARCHITECTURE.md) | Architecture diagrams and AWS services |
 | [Deployment Guide](docs/DEPLOYMENT.md) | AWS infrastructure deployment |
 | [Nearest Vet Feature](docs/NEAREST_VET_FEATURE.md) | Location services implementation |
 

@@ -85,7 +85,7 @@ AI-powered veterinary and crop diagnosis application for rural Indian farmers, p
 - AWS Amplify UI
 
 ### Backend
-- AWS Lambda (Node.js 20)
+- AWS Lambda (Node.js 22)
 - API Gateway with Cognito authorizer
 - Amazon Bedrock (Nova models)
 - Amazon DynamoDB

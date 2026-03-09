@@ -33,10 +33,10 @@ Pashu-Krishi Rakshak (Animal-Crop Guardian) is a serverless agricultural AI diag
 ### 4. API Layer
 - **Amazon API Gateway**: REST API with Cognito authorizer
   - `POST /analyze` - Diagnosis pipeline
-  - `GET/POST /history` - Case management
-  - `GET /location` - Nearest vet finder
+  - `GET/DELETE /history` - Case management
+  - `POST /location` - Nearest vet finder
 
-### 5. Serverless Backend (Node.js 20)
+### 5. Serverless Backend (Node.js 22)
 - **Analyze Lambda Function**:
   - Receives 4 base64-encoded image frames
   - Orchestrates the entire diagnostic pipeline
@@ -123,7 +123,7 @@ Pashu-Krishi Rakshak (Animal-Crop Guardian) is a serverless agricultural AI diag
 
 - **Case History**: Analyze Lambda saves diagnosis to History_V2 table
 - **Usage Logging**: All API calls logged to UsageLogs_V2 table
-- **Emergency Alert**: If confidence < 70%, Location Lambda finds nearest vet
+- **Emergency Alert**: If confidence < 60%, Location Lambda finds nearest vet
 
 ### Alternative Paths
 
@@ -168,7 +168,7 @@ Pashu-Krishi Rakshak (Animal-Crop Guardian) is a serverless agricultural AI diag
 | **Amplify** | Frontend Hosting | CI/CD, custom domains, HTTPS, automatic deployments |
 | **Cognito** | Authentication | User pools, JWT tokens, OAuth 2.0, MFA support |
 | **API Gateway** | API Management | REST API, Cognito authorizer, throttling, CORS |
-| **Lambda** | Compute | 3 functions (Analyze, History, Location), Node.js 20, auto-scaling |
+| **Lambda** | Compute | 3 functions (Analyze, History, Location), Node.js 22, auto-scaling |
 | **Bedrock (Nova Lite)** | AI/ML | Visual analysis, query generation, fast inference |
 | **Bedrock (Knowledge Base)** | AI/ML | Vector search, RAG, semantic retrieval |
 | **Bedrock (Nova Pro)** | AI/ML | Advanced reasoning, diagnosis generation, structured output |
@@ -180,26 +180,22 @@ Pashu-Krishi Rakshak (Animal-Crop Guardian) is a serverless agricultural AI diag
 
 ---
 
-## Performance Metrics
+## Performance Characteristics
 
-- **Client-Side Frame Extraction**: <1 second (Canvas API)
-- **API Gateway Latency**: ~50-100ms
-- **Lambda Cold Start**: ~2 seconds (first invocation)
-- **Lambda Warm Execution**: ~100-200ms
-- **Bedrock Nova Lite**: ~1-2 seconds (visual triage)
-- **Knowledge Base Search**: ~1-2 seconds (parallel queries)
-- **Bedrock Nova Pro**: ~2-3 seconds (diagnosis generation)
-- **Total End-to-End**: ~5-10 seconds
-- **Cognito Auth**: ~100-200ms (token validation)
-- **DynamoDB Operations**: <100ms (read/write)
+- **Client-Side Frame Extraction**: Canvas API runs locally on device
+- **Lambda Cold Start**: Expected on first invocation after idle period
+- **Parallel Processing**: 3 Knowledge Base queries run concurrently
+- **Lambda Timeout**: 120s for Analyze function (multi-step AI pipeline)
+- **DynamoDB**: On-demand mode, single-digit millisecond reads/writes
+- **Serverless Auto-Scaling**: All components scale with demand
 
 ---
 
 ## Security Considerations
 
 ### Authentication & Authorization
-- API Gateway with IAM authentication
-- Cognito for user management (future enhancement)
+- Amazon Cognito for user management and JWT token generation
+- API Gateway with Cognito authorizer on all endpoints
 - Lambda execution roles with least privilege
 
 ### Data Protection
