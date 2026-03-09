@@ -1478,7 +1478,14 @@ export default function PashuKrishiRakshak() {
             <Button
               className="w-full h-14 text-base font-semibold"
               onClick={() => {
-                resetCapture();
+                // Reset capture fields but preserve activeCaseId for follow-up context
+                setFile(null);
+                setPreviewUrl(null);
+                setSymptoms("");
+                setResult(null);
+                setParsedResult(null);
+                setError(null);
+                setShowOptionalDetails(false);
                 setAnimalName(activeCase.animalName !== "Unknown" ? activeCase.animalName : "");
                 setCurrentScreen('capture');
               }}
