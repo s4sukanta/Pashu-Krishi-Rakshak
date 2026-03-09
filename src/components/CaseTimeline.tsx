@@ -13,9 +13,10 @@ interface CaseTimelineProps {
     onFollowUp?: () => void;
     uploadForm?: React.ReactNode;
     onDeleteRecord?: (timestamp: string) => void;
+    nearestVet?: { name: string; address?: string; distanceKm: string } | null;
 }
 
-export function CaseTimeline({ caseData, onBack, onFollowUp, uploadForm, onDeleteRecord }: CaseTimelineProps) {
+export function CaseTimeline({ caseData, onBack, onFollowUp, uploadForm, onDeleteRecord, nearestVet }: CaseTimelineProps) {
     const [expandedRecord, setExpandedRecord] = useState<string | null>(caseData.records[caseData.records.length - 1]?.id || null);
 
     const toggleExpand = (id: string) => {
@@ -319,6 +320,26 @@ export function CaseTimeline({ caseData, onBack, onFollowUp, uploadForm, onDelet
                                                         )}
                                                     </div>
                                                 </div>
+
+                                                {/* Nearest Vet Location */}
+                                                {nearestVet && (
+                                                    <div className="mt-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                                                        <div className="flex items-start gap-3">
+                                                            <MapPin className="w-6 h-6 text-blue-600 shrink-0 mt-0.5" />
+                                                            <div className="flex-1">
+                                                                <h4 className="font-bold text-gray-900 mb-2">Nearest Veterinary Service</h4>
+                                                                <p className="font-semibold text-lg text-gray-800">{nearestVet.name}</p>
+                                                                {nearestVet.address && (
+                                                                    <p className="text-sm text-gray-600 mt-1">{nearestVet.address}</p>
+                                                                )}
+                                                                <div className="flex items-center gap-2 mt-2 text-blue-600 font-bold">
+                                                                    <MapPin className="w-4 h-4" />
+                                                                    <span>{nearestVet.distanceKm} km away</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
 
                                             </div>
                                         )}

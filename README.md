@@ -27,12 +27,15 @@ Pashu-Krishi Rakshak ("Livestock-Crop Protector") uses AWS Bedrock's multimodal 
 | Feature | Description |
 |---------|-------------|
 | **Multimodal AI** | Analyzes images and videos using Amazon Nova Pro |
+| **Location Services** | Finds nearest veterinary services using AWS Geo Places API |
 | **Knowledge Base** | RAG pipeline retrieves from veterinary manuals |
 | **Anti-Hallucination** | Grounding engine filters AI responses against retrieved facts |
 | **Quality Gates** | Rejects unclear media to prevent misdiagnosis |
 | **Text-to-Speech** | Automatic pronunciation for low-literacy users |
 | **Case Management** | Track multiple animals with health timelines |
 | **Farmer-Centric** | Focuses on home treatments, shows medicine costs in ₹ |
+
+**See**: [Complete Feature List](docs/FEATURES.md)
 
 ## Tech Stack
 
@@ -77,10 +80,13 @@ NEXT_PUBLIC_AWS_REGION=us-east-1
 
 | Document | Description |
 |----------|-------------|
+| [Documentation Index](docs/INDEX.md) | Complete documentation navigation |
+| [Features Overview](docs/FEATURES.md) | Feature list with technical details |
 | [Getting Started](docs/README.md) | Installation and usage guide |
-| [Deployment Guide](docs/DEPLOYMENT.md) | AWS Amplify & SAM deployment |
-| [Design Document](docs/design.md) | System architecture (1,100+ lines) |
-| [Requirements](docs/requirements.md) | 42 formal acceptance criteria |
+| [System Design](docs/design.md) | Architecture and design decisions |
+| [Requirements](docs/requirements.md) | Formal acceptance criteria |
+| [Deployment Guide](docs/DEPLOYMENT.md) | AWS infrastructure deployment |
+| [Nearest Vet Feature](docs/NEAREST_VET_FEATURE.md) | Location services implementation |
 
 ## Project Structure
 

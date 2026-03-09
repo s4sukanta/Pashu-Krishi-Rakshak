@@ -82,6 +82,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
    - Detailed description and typical symptoms
    - Prescription with medicine names, dosages, and prices
    - Home care steps
+   - **Nearest veterinary service** with distance
    - Recommendation to see a vet (if needed)
 
 ### Managing Cases
@@ -147,3 +148,24 @@ src/
 - [Deployment Guide](./DEPLOYMENT.md) — Deploy to AWS Amplify
 - [Design Document](./design.md) — System architecture details
 - [Requirements](./requirements.md) — Formal acceptance criteria
+- [Nearest Vet Feature](./NEAREST_VET_FEATURE.md) — Location-based vet finder
+
+## Key Features
+
+### 🌍 Multilingual Support
+Full interface in English, Hindi (हिंदी), and Bengali (বাংলা) for rural farmers
+
+### 🤖 AI-Powered Diagnosis
+Uses AWS Bedrock (Nova Lite + Nova Pro) with multimodal vision capabilities
+
+### 📍 Location Services
+Automatically finds nearest veterinary services using AWS Geo Places API
+
+### 📊 Case Management
+Track animal health over time with follow-up diagnoses and progression tracking
+
+### 💊 Actionable Prescriptions
+Medicine names, dosages, prices (in INR), and direct purchase links
+
+### 🔒 Secure Authentication
+AWS Cognito with email-based user accounts

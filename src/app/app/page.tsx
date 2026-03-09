@@ -245,6 +245,8 @@ export default function PashuKrishiRakshak() {
   const [captureMode, setCaptureMode] = useState<'photo' | 'video' | 'upload'>('photo');
   const [showOptionalDetails, setShowOptionalDetails] = useState<boolean>(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState<boolean>(false);
+  const [nearestVet, setNearestVet] = useState<{ name: string; address?: string; distanceKm: string } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   const { signOut, user } = useAuth();
   const router = useRouter();
@@ -339,10 +341,62 @@ export default function PashuKrishiRakshak() {
     }
   };
 
+  const fetchNearestVet = async () => {
+    try {
+      // Get user's current location
+      if (!navigator.geolocation) {
+        setLocationError("Geolocation not supported");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          
+          try {
+            const token = await getAuthToken();
+            const API_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, "");
+            
+            if (!API_URL) {
+              console.warn("API_URL not configured");
+              return;
+            }
+
+            const response = await fetch(`${API_URL}/location`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ latitude, longitude })
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              setNearestVet(data);
+            } else {
+              console.warn("Failed to fetch nearest vet:", response.status);
+            }
+          } catch (err) {
+            console.error("Error fetching nearest vet:", err);
+          }
+        },
+        (error) => {
+          console.warn("Geolocation error:", error.message);
+          setLocationError(error.message);
+        },
+        { timeout: 10000, enableHighAccuracy: false }
+      );
+    } catch (err) {
+      console.error("Error in fetchNearestVet:", err);
+    }
+  };
+
   useEffect(() => {
     // Only fetch remote data if user is authenticated
     if (user) {
       fetchRemoteData();
+      fetchNearestVet(); // Fetch location once on app load
     }
 
     // Load saved language preference
@@ -1345,6 +1399,30 @@ export default function PashuKrishiRakshak() {
               </Card>
             )}
 
+            {/* Nearest Vet Location */}
+            {nearestVet && (
+              <Card className="border-2 border-blue-300 bg-blue-50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Stethoscope className="w-6 h-6 text-blue-600" />
+                    {t.nearestPharmacy}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <p className="font-bold text-foreground text-lg">{nearestVet.name}</p>
+                    {nearestVet.address && (
+                      <p className="text-sm text-muted-foreground">{nearestVet.address}</p>
+                    )}
+                    <div className="flex items-center gap-2 text-blue-600 font-semibold">
+                      <Stethoscope className="w-4 h-4" />
+                      <span>{nearestVet.distanceKm} km {language === 'hindi' ? 'दूर' : language === 'bengali' ? 'দূরে' : 'away'}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Emergency Contact */}
             {parsedResult.recommendHumanVet && (
               <a
@@ -1469,6 +1547,7 @@ export default function PashuKrishiRakshak() {
             language={language}
             translations={t}
             onDeleteRecord={handleDeleteRecord}
+            nearestVet={nearestVet}
           />
         </main>
 

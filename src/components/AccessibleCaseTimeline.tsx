@@ -34,13 +34,15 @@ interface AccessibleCaseTimelineProps {
     visit: string;
   };
   onDeleteRecord?: (timestamp: string) => void;
+  nearestVet?: { name: string; address?: string; distanceKm: string } | null;
 }
 
 export function AccessibleCaseTimeline({ 
   caseData, 
   language,
   translations: t,
-  onDeleteRecord 
+  onDeleteRecord,
+  nearestVet
 }: AccessibleCaseTimelineProps) {
   const [expandedRecord, setExpandedRecord] = useState<string | null>(
     caseData.records[caseData.records.length - 1]?.id || null
@@ -267,6 +269,28 @@ export function AccessibleCaseTimeline({
                               <p className="text-sm text-foreground leading-relaxed">{step}</p>
                             </div>
                           ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Nearest Vet Location */}
+                    {nearestVet && (
+                      <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                        <div className="flex items-start gap-3">
+                          <Stethoscope className="w-6 h-6 text-blue-600 shrink-0" />
+                          <div className="flex-1">
+                            <h4 className="font-bold text-foreground mb-2">
+                              {language === 'hindi' ? 'नज़दीकी पशु चिकित्सालय' : language === 'bengali' ? 'নিকটতম পশু চিকিৎসালয়' : 'Nearest Veterinary Service'}
+                            </h4>
+                            <p className="font-semibold text-lg text-foreground">{nearestVet.name}</p>
+                            {nearestVet.address && (
+                              <p className="text-sm text-muted-foreground mt-1">{nearestVet.address}</p>
+                            )}
+                            <div className="flex items-center gap-2 mt-2 text-blue-600 font-bold">
+                              <Stethoscope className="w-4 h-4" />
+                              <span>{nearestVet.distanceKm} km {language === 'hindi' ? 'दूर' : language === 'bengali' ? 'দূরে' : 'away'}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}
